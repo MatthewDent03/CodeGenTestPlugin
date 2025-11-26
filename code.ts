@@ -1,101 +1,74 @@
-// Converts a Figma solid fill (RGB values from 0–1) into a CSS hex colour (#rrggbb)
 function getFillColor(node: SceneNode): string | null {
-  // Check if the node has a "fills" property and that it contains at least one paint object
   if ("fills" in node && Array.isArray(node.fills) && node.fills.length > 0) {
-    const fill = node.fills[0]; // Figma puts the first visible paint at index 0
-
-    // Only handle solid colours (ignores gradients, images, ...etc)
+    const fill = node.fills[0];
     if (fill.type === "SOLID") {
-      // Convert Figma RGB values (0–1 floats) into 0–255 integers
       const r = Math.round(fill.color.r * 255);
       const g = Math.round(fill.color.g * 255);
       const b = Math.round(fill.color.b * 255);
-
-      // Convert each colour value to hexadecimal string and ensures 2 characters
-      // .toString(16) converts a number to base-16 hex
-      // .padStart(2, "0") adds a leading zero if needed (e.g., "0a")
       const hexR = r.toString(16).padStart(2, "0");
       const hexG = g.toString(16).padStart(2, "0");
       const hexB = b.toString(16).padStart(2, "0");
-
-      // Build the final CSS colour format: #rrggbb
       return `#${hexR}${hexG}${hexB}`;
     }
   }
-
-  // If no usable fill exists (no solid paint or no fills), return null
   return null;
 }
 
-// Builds an inline CSS string with width, height, background colour, border radius
 function buildCSS(node: SceneNode): string {
   let css = "";
-
-  // size from Figma node data
   css += "width:" + node.width + "px;";
   css += " height:" + node.height + "px;";
-
-  // absolute positioning to match figma layout
   if ("x" in node && "y" in node) {
     css += " position:absolute;";
     css += " left:" + node.x + "px;";
     css += " top:" + node.y + "px;";
   }
-
-  // background fill
   const fill = getFillColor(node);
   if (fill) css += " background:" + fill + ";";
-
-  // rotation if exists
   if ("rotation" in node && typeof node.rotation === "number") {
     if (node.rotation !== 0) {
-      // flip so the rotation direction matches what figma shows
       css += " transform:rotate(" + -node.rotation + "deg);";
       css += " transform-origin:left top;";
     }
   }
-
-  // rounded corners (rectangles, frames, ...etc)
   if ("cornerRadius" in node && typeof node.cornerRadius === "number") {
     if (node.cornerRadius > 0) {
       css += " border-radius:" + node.cornerRadius + "px;";
     }
   }
-
   return css;
 }
 
-// Determines which HTML tag to use based on Figma node type
 function getTag(node: SceneNode): string {
-  // TEXT nodes become <p> so they contain readable text content
   if (node.type === "TEXT") return "p";
-
-  // Everything else becomes <div> (frames, groups, rectangles, components, ...etc)
   return "div";
 }
 
-// Converts a Figma node into an HTML string with inline CSS
 function convertNode(node: SceneNode): string {
-  // Decide which HTML element tag to use (from getTag)
   const tag = getTag(node);
-
-  // Build the inline CSS for this element
   const css = buildCSS(node);
 
-  // TEXT NODES
-  // These contain readable characters, return a <p> tag with text content
   if (node.type === "TEXT") {
-    const text = node.characters ? node.characters : "";
-    return "<" + tag + ' style="' + css + '">' + text + "</" + tag + ">\n";
+    const tnode = node as TextNode;
+    const text = tnode.characters ? tnode.characters : "";
+    const fill = getFillColor(node);
+    let textCss = "";
+    textCss += "width:" + node.width + "px;";
+    textCss += " height:" + node.height + "px;";
+    if ("x" in node && "y" in node) {
+      textCss += " position:absolute;";
+      textCss += " left:" + Math.round(node.x) + "px;";
+      textCss += " top:" + Math.round(node.y) + "px;";
+    }
+    if (fill) {
+      textCss += " color:" + fill + ";";
+    }
+    return `<${tag} style="${textCss}">${text}</${tag}>\n`;
   }
 
-  // NODES WITH CHILDREN (frames, groups, components, ...etc)
-  // Convert each child node into HTML as well
   if ("children" in node && node.children.length > 0) {
     let childrenHTML = "";
-
-    // parent container uses position:relative for absolute children
-    let frameCSS =
+    const frameCSS =
       "position:relative; width:" +
       node.width +
       "px; height:" +
@@ -104,10 +77,9 @@ function convertNode(node: SceneNode): string {
 
     for (let i = 0; i < node.children.length; i++) {
       const child = convertNode(node.children[i] as SceneNode);
-      childrenHTML += child + "\n"; // Adds new line to separate code in generator
+      childrenHTML += child + "\n";
     }
 
-    // Wrap the children inside a <div> or <p> if text
     return (
       "<" +
       tag +
@@ -122,28 +94,92 @@ function convertNode(node: SceneNode): string {
     );
   }
 
-  // rectangles, shapes, icons
   return "<" + tag + ' class="item" style="' + css + '"></' + tag + ">\n";
 }
 
-// Registers the Codegen handler - runs only in Dev Mode - Inspect panel)
+function convertNodeTailwind(node: SceneNode): string {
+  const tag = getTag(node);
+  const w = "w-[" + node.width + "px]";
+  const h = "h-[" + node.height + "px]";
+  let bg = "";
+  const fill = getFillColor(node);
+  if (fill) {
+    bg = "bg-[" + fill + "]";
+  }
+
+  const classes = [w, h];
+  if (bg) classes.push(bg);
+
+  if ("x" in node && "y" in node) {
+    classes.push("absolute");
+    const pos = node as SceneNode & { x: number; y: number };
+    classes.push("left-[" + Math.round(pos.x) + "px]");
+    classes.push("top-[" + Math.round(pos.y) + "px]");
+  }
+
+  if ("rotation" in node) {
+    const rnode = node as SceneNode & { rotation?: number };
+    if (typeof rnode.rotation === "number" && rnode.rotation !== 0) {
+      const angle = -rnode.rotation;
+      classes.push("rotate-[" + angle + "deg]");
+      classes.push("origin-top-left");
+    }
+  }
+
+  if ("cornerRadius" in node) {
+    const crnode = node as SceneNode & { cornerRadius?: number };
+    if (typeof crnode.cornerRadius === "number" && crnode.cornerRadius > 0) {
+      classes.push("rounded-[" + crnode.cornerRadius + "px]");
+    }
+  }
+
+  if (node.type === "TEXT") {
+    const tnode = node as TextNode;
+    const text = tnode.characters ? tnode.characters : "";
+    const filtered = classes.filter((c) => !c.startsWith("bg-"));
+    const fill = getFillColor(node);
+    if (fill) {
+      filtered.push(`text-[${fill}]`);
+    }
+    return `<${tag} class="${filtered.join(" ")}">${text}</${tag}>`;
+  }
+
+  if ("children" in node && node.children.length > 0) {
+    let childrenHTML = "";
+    for (let i = 0; i < node.children.length; i++) {
+      childrenHTML += convertNodeTailwind(node.children[i] as SceneNode) + "\n";
+    }
+    const containerClasses = ["relative", w, h];
+    if (bg) containerClasses.push(bg);
+    return `<${tag} class="${containerClasses.join(
+      " "
+    )}">\n${childrenHTML}</${tag}>`;
+  }
+
+  return `<${tag} class="${classes.join(" ")}"></${tag}>`;
+}
+
 if (figma.editorType === "dev" && figma.mode === "codegen") {
-  // This callback runs whenever the user selects a node in the Figma editor
   figma.codegen.on("generate", ({ node }) => {
-    // If user has no selection, return a placeholder HTML comment
     if (!node) {
       return [
         { title: "HTML", language: "HTML", code: "<!-- No layer selected -->" },
       ];
     }
-
-    // Convert the selected Figma layer/frame into HTML
     const html = convertNode(node as SceneNode);
-
-    // Return the HTML code block to the Dev Mode code panel
-    return [{ title: "HTML", language: "HTML", code: html }];
+    return [
+      {
+        title: "HTML",
+        language: "HTML",
+        code: html,
+      },
+      {
+        title: "Tailwind HTML",
+        language: "HTML",
+        code: convertNodeTailwind(node as SceneNode),
+      },
+    ];
   });
 } else {
-  // If plugin runs outside Dev Mode, close immediately
   figma.closePlugin();
 }
