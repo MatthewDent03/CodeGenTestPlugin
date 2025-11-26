@@ -3,19 +3,22 @@
   "id": "1573026597684374431",
   "api": "1.0.0",
   "main": "code.js",
-  "editorType": ["dev"],
+
+  "ui": {
+    "main": "ui.html"
+  },
+
+  "editorType": ["figma", "dev"],
+
   "capabilities": ["codegen"],
+
   "codegenLanguages": [
-    {
-      "label": "HTML",
-      "value": "HTML"
-    },
-    {
-      "label": "Tailwind HTML",
-      "value": "TAILWIND_HTML"
-    }
+    { "label": "HTML", "value": "HTML" },
+    { "label": "Tailwind HTML", "value": "TAILWIND_HTML" }
   ],
+
   "documentAccess": "dynamic-page",
+
   "networkAccess": {
     "allowedDomains": ["none"]
   }
