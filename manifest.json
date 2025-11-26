@@ -9,6 +9,10 @@
     {
       "label": "HTML",
       "value": "HTML"
+    },
+    {
+      "label": "Tailwind HTML",
+      "value": "TAILWIND_HTML"
     }
   ],
   "documentAccess": "dynamic-page",

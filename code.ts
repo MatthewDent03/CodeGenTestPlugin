@@ -99,49 +99,59 @@ function convertNode(node: SceneNode): string {
 
 function convertNodeTailwind(node: SceneNode): string {
   const tag = getTag(node);
-  const w = "w-[" + node.width + "px]";
-  const h = "h-[" + node.height + "px]";
-  let bg = "";
+  const widthClass = "w-[" + node.width + "px]";
+  const heightClass = "h-[" + node.height + "px]";
+  let backgroundClass = "";
   const fill = getFillColor(node);
   if (fill) {
-    bg = "bg-[" + fill + "]";
+    backgroundClass = "bg-[" + fill + "]";
   }
 
-  const classes = [w, h];
-  if (bg) classes.push(bg);
+  const classList = [widthClass, heightClass];
+  if (backgroundClass) classList.push(backgroundClass);
 
   if ("x" in node && "y" in node) {
-    classes.push("absolute");
-    const pos = node as SceneNode & { x: number; y: number };
-    classes.push("left-[" + Math.round(pos.x) + "px]");
-    classes.push("top-[" + Math.round(pos.y) + "px]");
+    classList.push("absolute");
+    const positionedNode = node as SceneNode & { x: number; y: number };
+    classList.push("left-[" + Math.round(positionedNode.x) + "px]");
+    classList.push("top-[" + Math.round(positionedNode.y) + "px]");
   }
 
   if ("rotation" in node) {
-    const rnode = node as SceneNode & { rotation?: number };
-    if (typeof rnode.rotation === "number" && rnode.rotation !== 0) {
-      const angle = -rnode.rotation;
-      classes.push("rotate-[" + angle + "deg]");
-      classes.push("origin-top-left");
+    const rotationNode = node as SceneNode & { rotation?: number };
+    if (
+      typeof rotationNode.rotation === "number" &&
+      rotationNode.rotation !== 0
+    ) {
+      const angle = -rotationNode.rotation;
+      classList.push("rotate-[" + angle + "deg]");
+      classList.push("origin-top-left");
     }
   }
 
   if ("cornerRadius" in node) {
-    const crnode = node as SceneNode & { cornerRadius?: number };
-    if (typeof crnode.cornerRadius === "number" && crnode.cornerRadius > 0) {
-      classes.push("rounded-[" + crnode.cornerRadius + "px]");
+    const cornerNode = node as SceneNode & { cornerRadius?: number };
+    if (
+      typeof cornerNode.cornerRadius === "number" &&
+      cornerNode.cornerRadius > 0
+    ) {
+      classList.push("rounded-[" + cornerNode.cornerRadius + "px]");
     }
   }
 
   if (node.type === "TEXT") {
-    const tnode = node as TextNode;
-    const text = tnode.characters ? tnode.characters : "";
-    const filtered = classes.filter((c) => !c.startsWith("bg-"));
-    const fill = getFillColor(node);
-    if (fill) {
-      filtered.push(`text-[${fill}]`);
+    const textNode = node as TextNode;
+    const text = textNode.characters ? textNode.characters : "";
+    // Remove background classes for text nodes and add text color instead
+    // `className` represents each individual Tailwind class string in the list
+    const filteredClasses = classList.filter(
+      (className) => !className.startsWith("bg-")
+    );
+    const textFill = getFillColor(node);
+    if (textFill) {
+      filteredClasses.push(`text-[${textFill}]`);
     }
-    return `<${tag} class="${filtered.join(" ")}">${text}</${tag}>`;
+    return `<${tag} class="${filteredClasses.join(" ")}">${text}</${tag}>`;
   }
 
   if ("children" in node && node.children.length > 0) {
@@ -149,34 +159,56 @@ function convertNodeTailwind(node: SceneNode): string {
     for (let i = 0; i < node.children.length; i++) {
       childrenHTML += convertNodeTailwind(node.children[i] as SceneNode) + "\n";
     }
-    const containerClasses = ["relative", w, h];
-    if (bg) containerClasses.push(bg);
+    const containerClasses = ["relative", widthClass, heightClass];
+    if (backgroundClass) containerClasses.push(backgroundClass);
     return `<${tag} class="${containerClasses.join(
       " "
     )}">\n${childrenHTML}</${tag}>`;
   }
 
-  return `<${tag} class="${classes.join(" ")}"></${tag}>`;
+  return `<${tag} class="${classList.join(" ")}"></${tag}>`;
 }
 
 if (figma.editorType === "dev" && figma.mode === "codegen") {
-  figma.codegen.on("generate", ({ node }) => {
+  figma.codegen.on("generate", ({ node, language }) => {
     if (!node) {
       return [
-        { title: "HTML", language: "HTML", code: "<!-- No layer selected -->" },
+        {
+          title: "HTML",
+          language: "HTML",
+          code: "<!-- No layer selected -->",
+        },
       ];
     }
-    const html = convertNode(node as SceneNode);
+
+    // User selected standard HTML in the dropdown
+    if (language === "HTML") {
+      return [
+        {
+          title: "HTML",
+          language: "HTML", // valid language
+          code: convertNode(node as SceneNode),
+        },
+      ];
+    }
+
+    // User selected "Tailwind HTML" from manifest dropdown
+    if (language === "TAILWIND_HTML") {
+      return [
+        {
+          title: "Tailwind HTML",
+          language: "HTML", // MUST be HTML, cannot be TAILWIND
+          code: convertNodeTailwind(node as SceneNode),
+        },
+      ];
+    }
+
+    // fallback
     return [
       {
         title: "HTML",
         language: "HTML",
-        code: html,
-      },
-      {
-        title: "Tailwind HTML",
-        language: "HTML",
-        code: convertNodeTailwind(node as SceneNode),
+        code: convertNode(node as SceneNode),
       },
     ];
   });

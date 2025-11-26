@@ -38,7 +38,7 @@
 
         if (!msg) return;
 
-        if (msg.type === "node-data") {
+        if (msg.type === "selection-update") {
           const status = document.getElementById("selection-status");
           const pre = document.getElementById("node-json");
           status.textContent = `Selected: ${msg.data.name} (${msg.data.type})`;
