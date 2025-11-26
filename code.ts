@@ -1,67 +1,67 @@
-// =======================
+// ======================================================
 // INDENT HELPER
-// =======================
+// ======================================================
 function indent(level: number): string {
   return "  ".repeat(level);
 }
 
-// =======================
+// ======================================================
 // COLOR (FILL)
-// =======================
+// ======================================================
 function getFillColor(node: SceneNode): string | null {
   if ("fills" in node && Array.isArray(node.fills) && node.fills.length > 0) {
-    const fill = node.fills[0];
-    if (fill.type === "SOLID") {
-      const r = Math.round(fill.color.r * 255);
-      const g = Math.round(fill.color.g * 255);
-      const b = Math.round(fill.color.b * 255);
-      const hexR = r.toString(16).padStart(2, "0");
-      const hexG = g.toString(16).padStart(2, "0");
-      const hexB = b.toString(16).padStart(2, "0");
-      return `#${hexR}${hexG}${hexB}`;
+    const fillPaint = node.fills[0];
+    if (fillPaint.type === "SOLID") {
+      const r = Math.round(fillPaint.color.r * 255);
+      const g = Math.round(fillPaint.color.g * 255);
+      const b = Math.round(fillPaint.color.b * 255);
+      return `#${r.toString(16).padStart(2, "0")}${g
+        .toString(16)
+        .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
     }
   }
   return null;
 }
 
-// =======================
+// ======================================================
 // BORDER (STROKE)
-// =======================
+// ======================================================
 function getStroke(node: SceneNode): { color: string; width: number } | null {
   if (
     "strokes" in node &&
     Array.isArray(node.strokes) &&
     node.strokes.length > 0
   ) {
-    const s = node.strokes[0] as SolidPaint;
-    if (s.type === "SOLID") {
-      const r = Math.round(s.color.r * 255);
-      const g = Math.round(s.color.g * 255);
-      const b = Math.round(s.color.b * 255);
-      const color = `#${r.toString(16)}${g.toString(16)}${b.toString(16)}`;
+    const strokePaint = node.strokes[0] as SolidPaint;
+
+    if (strokePaint.type === "SOLID") {
+      const r = Math.round(strokePaint.color.r * 255);
+      const g = Math.round(strokePaint.color.g * 255);
+      const b = Math.round(strokePaint.color.b * 255);
+      const hexColor = `#${r.toString(16)}${g.toString(16)}${b.toString(16)}`;
       const width = (node as any).strokeWeight || 1;
-      return { color, width };
+      return { color: hexColor, width };
     }
   }
   return null;
 }
 
-// =======================
-// BUILD RAW CSS
-// =======================
+// ======================================================
+// BUILD RAW CSS STYLES
+// ======================================================
 function buildCSS(node: SceneNode): string {
   let css = "";
-  css += "width:" + node.width + "px;";
-  css += " height:" + node.height + "px;";
+
+  css += `width:${node.width}px;`;
+  css += ` height:${node.height}px;`;
 
   if ("x" in node && "y" in node) {
     css += " position:absolute;";
-    css += " left:" + node.x + "px;";
-    css += " top:" + node.y + "px;";
+    css += ` left:${node.x}px; top:${node.y}px;`;
   }
 
-  const fill = getFillColor(node);
-  if (fill) css += " background:" + fill + ";";
+  const fillColor = getFillColor(node);
+  if (fillColor) css += ` background:${fillColor};`;
 
   const stroke = getStroke(node);
   if (stroke) css += ` border:${stroke.width}px solid ${stroke.color};`;
@@ -71,8 +71,7 @@ function buildCSS(node: SceneNode): string {
     typeof node.rotation === "number" &&
     node.rotation !== 0
   ) {
-    css += " transform:rotate(" + -node.rotation + "deg);";
-    css += " transform-origin:left top;";
+    css += ` transform:rotate(${-node.rotation}deg); transform-origin:left top;`;
   }
 
   if (
@@ -80,51 +79,53 @@ function buildCSS(node: SceneNode): string {
     typeof node.cornerRadius === "number" &&
     node.cornerRadius > 0
   ) {
-    css += " border-radius:" + node.cornerRadius + "px;";
+    css += ` border-radius:${node.cornerRadius}px;`;
   }
 
   return css;
 }
 
-// =======================
-// HTML TAG SELECTOR
-// =======================
+// ======================================================
+// SELECT HTML TAG (DIV or P)
+// ======================================================
 function getTag(node: SceneNode): string {
   return node.type === "TEXT" ? "p" : "div";
 }
 
-// =======================
-// HTML CONVERTER (INDENTED)
-// =======================
+// ======================================================
+// HTML CONVERTER (WITH ABSOLUTE FIX)
+// ======================================================
 function convertNode(node: SceneNode, level: number = 0): string {
   const tag = getTag(node);
 
+  // --------------------------------------------
   // TEXT NODE
+  // --------------------------------------------
   if (node.type === "TEXT") {
-    const t = node as TextNode;
-    const text = t.characters ?? "";
+    const textNode = node as TextNode;
+    const textValue = textNode.characters ?? "";
 
     let css = "";
-    css += "width:" + node.width + "px;";
-    css += " height:" + node.height + "px;";
-    css += " position:absolute;";
-    css += " left:" + Math.round(node.x) + "px;";
-    css += " top:" + Math.round(node.y) + "px;";
+    css += `width:${node.width}px; height:${node.height}px; position:absolute;`;
+    css += ` left:${Math.round(node.x)}px; top:${Math.round(node.y)}px;`;
 
-    const fill = getFillColor(node);
-    if (fill) css += " color:" + fill + ";";
+    const fillColor = getFillColor(node);
+    if (fillColor) css += ` color:${fillColor};`;
 
-    if (typeof t.fontSize === "number") css += ` font-size:${t.fontSize}px;`;
+    if (typeof textNode.fontSize === "number") {
+      css += ` font-size:${textNode.fontSize}px;`;
+    }
 
-    const font = t.fontName;
-    if (font !== figma.mixed) {
-      css += ` font-family:"${font.family}";`;
-      if (typeof (t as any).fontWeight === "number") {
-        css += ` font-weight:${(t as any).fontWeight};`;
+    if (textNode.fontName !== figma.mixed) {
+      const font = textNode.fontName as FontName;
+      css += ` font-family:'${font.family}';`;
+
+      if (typeof (textNode as any).fontWeight === "number") {
+        css += ` font-weight:${(textNode as any).fontWeight};`;
       }
     }
 
-    switch (t.textAlignHorizontal) {
+    switch (textNode.textAlignHorizontal) {
       case "CENTER":
         css += " text-align:center;";
         break;
@@ -135,72 +136,75 @@ function convertNode(node: SceneNode, level: number = 0): string {
         css += " text-align:left;";
     }
 
-    return `${indent(level)}<${tag} style="${css}">${text}</${tag}>\n`;
+    return `${indent(level)}<${tag} style="${css}">${textValue}</${tag}>\n`;
   }
 
-  // FRAME / GROUP (HAS CHILDREN)
+  // --------------------------------------------
+  // FRAME / CONTAINER (FIXED: NOW ABSOLUTE)
+  // --------------------------------------------
   if ("children" in node && node.children.length > 0) {
-    let frameCSS =
-      "position:relative; width:" +
-      node.width +
-      "px; height:" +
-      node.height +
-      "px;";
+    let frameCSS = `position:absolute; width:${node.width}px; height:${node.height}px;`;
 
-    const fill = getFillColor(node);
-    if (fill) frameCSS += ` background:${fill};`;
+    frameCSS += ` left:${Math.round(node.x)}px; top:${Math.round(node.y)}px;`;
+
+    const fillColor = getFillColor(node);
+    if (fillColor) frameCSS += ` background:${fillColor};`;
 
     const stroke = getStroke(node);
     if (stroke) frameCSS += ` border:${stroke.width}px solid ${stroke.color};`;
 
-    const n = node as any;
-    if (n.paddingTop) frameCSS += ` padding-top:${n.paddingTop}px;`;
-    if (n.paddingBottom) frameCSS += ` padding-bottom:${n.paddingBottom}px;`;
-    if (n.paddingLeft) frameCSS += ` padding-left:${n.paddingLeft}px;`;
-    if (n.paddingRight) frameCSS += ` padding-right:${n.paddingRight}px;`;
-    if (n.itemSpacing) frameCSS += ` gap:${n.itemSpacing}px;`;
+    const frame = node as any;
 
-    let childrenHTML = "";
+    if (frame.paddingTop) frameCSS += ` padding-top:${frame.paddingTop}px;`;
+    if (frame.paddingBottom)
+      frameCSS += ` padding-bottom:${frame.paddingBottom}px;`;
+    if (frame.paddingLeft) frameCSS += ` padding-left:${frame.paddingLeft}px;`;
+    if (frame.paddingRight)
+      frameCSS += ` padding-right:${frame.paddingRight}px;`;
+    if (frame.itemSpacing) frameCSS += ` gap:${frame.itemSpacing}px;`;
+
+    let childHTML = "";
     for (const child of node.children) {
-      childrenHTML += convertNode(child as SceneNode, level + 1);
+      childHTML += convertNode(child as SceneNode, level + 1);
     }
 
     return (
       `${indent(level)}<${tag} class="frame" style="${frameCSS}">\n` +
-      childrenHTML +
+      childHTML +
       `${indent(level)}</${tag}>\n`
     );
   }
 
-  // BASIC NODE
+  // --------------------------------------------
+  // SIMPLE RECTANGLE / SHAPE
+  // --------------------------------------------
   return `${indent(level)}<${tag} class="item" style="${buildCSS(
     node
   )}"></${tag}>\n`;
 }
 
-// =======================
-// TAILWIND CONVERTER (INDENTED)
-// =======================
+// ======================================================
+// TAILWIND CONVERTER (ALREADY WORKING CORRECTLY)
+// ======================================================
 function convertNodeTailwind(node: SceneNode, level: number = 0): string {
   const tag = getTag(node);
+  const widthClass = `w-[${node.width}px]`;
+  const heightClass = `h-[${node.height}px]`;
 
-  const width = `w-[${node.width}px]`;
-  const height = `h-[${node.height}px]`;
+  const fillColor = getFillColor(node);
+  const classList = [widthClass, heightClass];
 
-  const fill = getFillColor(node);
-  const list = [width, height];
-
-  if (fill) list.push(`bg-[${fill}]`);
+  if (fillColor) classList.push(`bg-[${fillColor}]`);
 
   if ("x" in node && "y" in node) {
-    list.push("absolute");
-    list.push(`left-[${Math.round(node.x)}px]`);
-    list.push(`top-[${Math.round(node.y)}px]`);
+    classList.push("absolute");
+    classList.push(`left-[${Math.round(node.x)}px]`);
+    classList.push(`top-[${Math.round(node.y)}px]`);
   }
 
   if ("rotation" in node && node.rotation !== 0) {
-    list.push(`rotate-[${-node.rotation}deg]`);
-    list.push("origin-top-left");
+    classList.push(`rotate-[${-node.rotation}deg]`);
+    classList.push("origin-top-left");
   }
 
   if (
@@ -208,81 +212,103 @@ function convertNodeTailwind(node: SceneNode, level: number = 0): string {
     typeof node.cornerRadius === "number" &&
     node.cornerRadius > 0
   ) {
-    list.push(`rounded-[${node.cornerRadius}px]`);
+    classList.push(`rounded-[${node.cornerRadius}px]`);
   }
 
   const stroke = getStroke(node);
   if (stroke) {
-    list.push(`border-[${stroke.width}px]`);
-    list.push(`border-[${stroke.color}]`);
+    classList.push(`border-[${stroke.width}px]`);
+    classList.push(`border-[${stroke.color}]`);
   }
 
+  // --------------------------------------------
   // TEXT NODE
+  // --------------------------------------------
   if (node.type === "TEXT") {
-    const t = node as TextNode;
-    const text = t.characters ?? "";
+    const textNode = node as TextNode;
+    const textValue = textNode.characters ?? "";
 
-    const filtered = list.filter((c) => !c.startsWith("bg-"));
-    if (fill) filtered.push(`text-[${fill}]`);
+    const filteredClasses = classList.filter((c) => !c.startsWith("bg-"));
 
-    if (typeof t.fontSize === "number") filtered.push(`text-[${t.fontSize}px]`);
+    if (fillColor) filteredClasses.push(`text-[${fillColor}]`);
 
-    if (t.fontName !== figma.mixed) {
-      const f = t.fontName as FontName;
-      filtered.push(`font-["${f.family}"]`);
+    if (typeof textNode.fontSize === "number") {
+      filteredClasses.push(`text-[${textNode.fontSize}px]`);
     }
 
-    if (typeof (t as any).fontWeight === "number") {
-      filtered.push(`font-[${(t as any).fontWeight}]`);
+    if (textNode.fontName !== figma.mixed) {
+      const font = textNode.fontName as FontName;
+      filteredClasses.push(`font-['${font.family}']`);
     }
 
-    switch (t.textAlignHorizontal) {
+    if (typeof (textNode as any).fontWeight === "number") {
+      filteredClasses.push(`font-[${(textNode as any).fontWeight}]`);
+    }
+
+    switch (textNode.textAlignHorizontal) {
       case "CENTER":
-        filtered.push("text-center");
+        filteredClasses.push("text-center");
         break;
       case "RIGHT":
-        filtered.push("text-right");
+        filteredClasses.push("text-right");
         break;
       default:
-        filtered.push("text-left");
+        filteredClasses.push("text-left");
     }
 
-    return `${indent(level)}<${tag} class="${filtered.join(
+    return `${indent(level)}<${tag} class="${filteredClasses.join(
       " "
-    )}">${text}</${tag}>\n`;
+    )}">${textValue}</${tag}>\n`;
   }
 
-  // CONTAINER WITH CHILDREN
+  // --------------------------------------------
+  // FRAME / GROUP
+  // --------------------------------------------
   if ("children" in node && node.children.length > 0) {
-    const container = ["relative", width, height];
-    if (fill) container.push(`bg-[${fill}]`);
+    const containerClasses = [];
 
-    const n = node as any;
-    if (n.paddingTop) container.push(`pt-[${n.paddingTop}px]`);
-    if (n.paddingBottom) container.push(`pb-[${n.paddingBottom}px]`);
-    if (n.paddingLeft) container.push(`pl-[${n.paddingLeft}px]`);
-    if (n.paddingRight) container.push(`pr-[${n.paddingRight}px]`);
-    if (n.itemSpacing) container.push(`gap-[${n.itemSpacing}px]`);
+    containerClasses.push(widthClass, heightClass);
 
-    let childrenHTML = "";
+    if ("x" in node && "y" in node) {
+      containerClasses.push("absolute");
+      containerClasses.push(`left-[${Math.round(node.x)}px]`);
+      containerClasses.push(`top-[${Math.round(node.y)}px]`);
+    } else {
+      containerClasses.push("relative");
+    }
+
+    if (fillColor) containerClasses.push(`bg-[${fillColor}]`);
+
+    const frame = node as any;
+
+    if (frame.paddingTop) containerClasses.push(`pt-[${frame.paddingTop}px]`);
+    if (frame.paddingBottom)
+      containerClasses.push(`pb-[${frame.paddingBottom}px]`);
+    if (frame.paddingLeft) containerClasses.push(`pl-[${frame.paddingLeft}px]`);
+    if (frame.paddingRight)
+      containerClasses.push(`pr-[${frame.paddingRight}px]`);
+
+    if (frame.itemSpacing)
+      containerClasses.push(`gap-[${frame.itemSpacing}px]`);
+
+    let innerHTML = "";
     for (const child of node.children) {
-      childrenHTML += convertNodeTailwind(child as SceneNode, level + 1);
+      innerHTML += convertNodeTailwind(child as SceneNode, level + 1);
     }
 
     return (
-      `${indent(level)}<${tag} class="${container.join(" ")}">\n` +
-      childrenHTML +
+      `${indent(level)}<${tag} class="${containerClasses.join(" ")}">\n` +
+      innerHTML +
       `${indent(level)}</${tag}>\n`
     );
   }
 
-  // BASIC NODE
-  return `${indent(level)}<${tag} class="${list.join(" ")}"></${tag}>\n`;
+  return `${indent(level)}<${tag} class="${classList.join(" ")}"></${tag}>\n`;
 }
 
-// =======================
-// CODEGEN: HTML + TAILWIND HTML
-// =======================
+// ======================================================
+// CODEGEN HANDLER
+// ======================================================
 if (figma.editorType === "dev" && figma.mode === "codegen") {
   figma.codegen.on("generate", ({ node, language }) => {
     if (!node) {
@@ -305,7 +331,7 @@ if (figma.editorType === "dev" && figma.mode === "codegen") {
       return [
         {
           title: "Tailwind HTML",
-          language: "HTML", // must be HTML
+          language: "HTML",
           code: convertNodeTailwind(node as SceneNode, 0),
         },
       ];
