@@ -1,19 +1,22 @@
-// ======================================================
-// SHOW UI ONLY IN PLUGIN MODE
-// ======================================================
+// --------------------------------------------------------------
+// SHOW UI ONLY WHEN RUNNING AS A NORMAL PLUGIN (not codegen)
+// --------------------------------------------------------------
 if (figma.editorType === "figma") {
+  // Load ui.html with a fixed window size
   figma.showUI(__uiFiles__.main, { width: 320, height: 400 });
 
+  // Listen for selection changes inside the canvas
   figma.on("selectionchange", () => {
     const node = figma.currentPage.selection[0];
 
+    // Nothing selected - tell the UI
     if (!node) {
       figma.ui.postMessage({ type: "no-selection" });
       return;
     }
 
+    // Extract readable properties and send to UI
     const props = extractNodeProperties(node);
-
     figma.ui.postMessage({
       type: "selection-update",
       data: props,
@@ -21,16 +24,17 @@ if (figma.editorType === "figma") {
   });
 }
 
-// ======================================================
-// INDENT HELPER
-// ======================================================
+// --------------------------------------------------------------
+// SIMPLE INDENT FUNCTION FOR HTML OUTPUT
+// --------------------------------------------------------------
 function indent(level: number): string {
   return "  ".repeat(level);
 }
 
-// ======================================================
-// GET FILL COLOR
-// ======================================================
+// --------------------------------------------------------------
+// EXTRACT FIRST FILL COLOR (SOLID ONLY)
+// Returns hex value or null
+// --------------------------------------------------------------
 function getFillColor(node: SceneNode): string | null {
   if ("fills" in node && Array.isArray(node.fills) && node.fills.length > 0) {
     const paint = node.fills[0];
@@ -46,9 +50,10 @@ function getFillColor(node: SceneNode): string | null {
   return null;
 }
 
-// ======================================================
-// GET BORDER
-// ======================================================
+// --------------------------------------------------------------
+// EXTRACT FIRST STROKE (SOLID ONLY)
+// Returns border width + hex color or null
+// --------------------------------------------------------------
 function getStroke(node: SceneNode): { color: string; width: number } | null {
   if ("strokes" in node && node.strokes.length > 0) {
     const paint = node.strokes[0];
@@ -65,26 +70,31 @@ function getStroke(node: SceneNode): { color: string; width: number } | null {
   return null;
 }
 
-// ======================================================
-// RAW CSS BUILDER
-// ======================================================
+// --------------------------------------------------------------
+// BUILD INLINE CSS FOR BASIC SHAPES/FRAMES
+// --------------------------------------------------------------
 function buildCSS(node: SceneNode): string {
   let css = `width:${node.width}px; height:${node.height}px;`;
 
+  // Absolute position
   if ("x" in node && "y" in node) {
     css += ` position:absolute; left:${node.x}px; top:${node.y}px;`;
   }
 
+  // Background
   const fill = getFillColor(node);
   if (fill) css += ` background:${fill};`;
 
+  // Border
   const stroke = getStroke(node);
   if (stroke) css += ` border:${stroke.width}px solid ${stroke.color};`;
 
+  // Rotation
   if ("rotation" in node && node.rotation !== 0) {
     css += ` transform:rotate(${-node.rotation}deg); transform-origin:left top;`;
   }
 
+  // Corner radius
   if ("cornerRadius" in node && typeof node.cornerRadius === "number") {
     css += ` border-radius:${node.cornerRadius}px;`;
   }
@@ -92,16 +102,16 @@ function buildCSS(node: SceneNode): string {
   return css;
 }
 
-// ======================================================
-// SELECT TAG
-// ======================================================
+// --------------------------------------------------------------
+// DECIDE HTML TAG BASED ON NODE TYPE
+// --------------------------------------------------------------
 function getTag(node: SceneNode): string {
   return node.type === "TEXT" ? "p" : "div";
 }
 
-// ======================================================
-// HTML CONVERTER
-// ======================================================
+// --------------------------------------------------------------
+// CONVERT NODE TO HTML
+// --------------------------------------------------------------
 function convertNode(node: SceneNode, level: number = 0): string {
   const tag = getTag(node);
 
@@ -113,9 +123,13 @@ function convertNode(node: SceneNode, level: number = 0): string {
     return convertFrameHTML(node as FrameNode, tag, level);
   }
 
+  // shape (rectangle, line, etc.)
   return `${indent(level)}<${tag} style="${buildCSS(node)}"></${tag}>\n`;
 }
 
+// --------------------------------------------------------------
+// TEXT NODE to HTML <p>
+// --------------------------------------------------------------
 function convertTextNodeHTML(
   node: TextNode,
   tag: string,
@@ -123,17 +137,21 @@ function convertTextNodeHTML(
 ): string {
   let css = `width:${node.width}px; height:${node.height}px; position:absolute; left:${node.x}px; top:${node.y}px;`;
 
+  // Fill color
   const fill = getFillColor(node);
   if (fill) css += ` color:${fill};`;
 
+  // Font size
   if (typeof node.fontSize === "number")
     css += ` font-size:${node.fontSize}px;`;
 
+  // Font family
   if (node.fontName !== figma.mixed) {
     const font = node.fontName as FontName;
     css += ` font-family:'${font.family}';`;
   }
 
+  // Text alignment
   switch (node.textAlignHorizontal) {
     case "CENTER":
       css += " text-align:center;";
@@ -148,6 +166,9 @@ function convertTextNodeHTML(
   return `${indent(level)}<${tag} style="${css}">${node.characters}</${tag}>\n`;
 }
 
+// --------------------------------------------------------------
+// FRAME to HTML <div> WITH CHILDREN
+// --------------------------------------------------------------
 function convertFrameHTML(node: FrameNode, tag: string, level: number): string {
   let css = `position:absolute; width:${node.width}px; height:${node.height}px; left:${node.x}px; top:${node.y}px;`;
 
@@ -157,6 +178,7 @@ function convertFrameHTML(node: FrameNode, tag: string, level: number): string {
   const stroke = getStroke(node);
   if (stroke) css += ` border:${stroke.width}px solid ${stroke.color};`;
 
+  // Render all children under this frame
   let childrenHTML = "";
   for (const child of node.children) {
     childrenHTML += convertNode(child, level + 1);
@@ -169,9 +191,9 @@ function convertFrameHTML(node: FrameNode, tag: string, level: number): string {
   )}</${tag}>\n`;
 }
 
-// ======================================================
+// --------------------------------------------------------------
 // TAILWIND CONVERTER
-// ======================================================
+// --------------------------------------------------------------
 function convertNodeTailwind(node: SceneNode, level: number = 0): string {
   const tag = getTag(node);
 
@@ -186,18 +208,21 @@ function convertNodeTailwind(node: SceneNode, level: number = 0): string {
   return convertShapeTailwind(node, tag, level);
 }
 
+// --------------------------------------------------------------
+// SHAPE - Tailwind <div>
+// --------------------------------------------------------------
 function convertShapeTailwind(
   node: SceneNode,
   tag: string,
   level: number
 ): string {
-  const widthClass = `w-[${node.width}px]`;
-  const heightClass = `h-[${node.height}px]`;
+  const width = `w-[${node.width}px]`;
+  const height = `h-[${node.height}px]`;
 
   const fill = getFillColor(node);
   const stroke = getStroke(node);
 
-  const classes = [widthClass, heightClass];
+  const classes = [width, height];
 
   if (fill) classes.push(`bg-[${fill}]`);
 
@@ -210,23 +235,23 @@ function convertShapeTailwind(
   }
 
   if (stroke) {
-    classes.push(`border-[${stroke.width}px]`);
-    classes.push(`border-[${stroke.color}]`);
+    classes.push(`border-[${stroke.width}px]`, `border-[${stroke.color}]`);
   }
 
   return `${indent(level)}<${tag} class="${classes.join(" ")}"></${tag}>\n`;
 }
 
+// --------------------------------------------------------------
+// TEXT NODE - Tailwind
+// --------------------------------------------------------------
 function convertTextNodeTailwind(node: TextNode, tag: string, level: number) {
-  const base = convertShapeTailwind(node, tag, level);
   const textClasses: string[] = [];
 
   const fill = getFillColor(node);
   if (fill) textClasses.push(`text-[${fill}]`);
 
-  if (typeof node.fontSize === "number") {
+  if (typeof node.fontSize === "number")
     textClasses.push(`text-[${node.fontSize}px]`);
-  }
 
   if (node.fontName !== figma.mixed) {
     const font = node.fontName as FontName;
@@ -249,6 +274,9 @@ function convertTextNodeTailwind(node: TextNode, tag: string, level: number) {
   }</${tag}>\n`;
 }
 
+// --------------------------------------------------------------
+// FRAME - Tailwind
+// --------------------------------------------------------------
 function convertFrameTailwind(node: FrameNode, tag: string, level: number) {
   const classes = [`w-[${node.width}px]`, `h-[${node.height}px]`];
 
@@ -271,9 +299,9 @@ function convertFrameTailwind(node: FrameNode, tag: string, level: number) {
   )}">\n${childrenHTML}${indent(level)}</${tag}>\n`;
 }
 
-// ======================================================
-// PROPERTY EXTRACTOR FOR UI
-// ======================================================
+// --------------------------------------------------------------
+// EXTRACT PROPERTIES FOR UI PANEL
+// --------------------------------------------------------------
 function extractNodeProperties(node: SceneNode) {
   const data: any = {
     id: node.id,
@@ -286,18 +314,16 @@ function extractNodeProperties(node: SceneNode) {
   };
 
   if ("fills" in node && Array.isArray(node.fills) && node.fills.length > 0) {
-    const f = node.fills[0];
-    if (f.type === "SOLID") {
-      data.fill = f.color;
-    }
+    const fillColour = node.fills[0];
+    if (fillColour.type === "SOLID") data.fill = fillColour.color;
   }
 
   if ("strokes" in node && node.strokes.length > 0) {
-    const s = node.strokes[0];
-    if (s.type === "SOLID") {
+    const strokeColour = node.strokes[0];
+    if (strokeColour.type === "SOLID") {
       data.stroke = {
         width: (node as any).strokeWeight,
-        color: s.color,
+        color: strokeColour.color,
       };
     }
   }
@@ -313,9 +339,9 @@ function extractNodeProperties(node: SceneNode) {
   return data;
 }
 
-// ======================================================
-// CODEGEN MODE
-// ======================================================
+// --------------------------------------------------------------
+// CODEGEN MODE — RETURN HTML OR TAILWIND
+// --------------------------------------------------------------
 if (figma.editorType === "dev" && figma.mode === "codegen") {
   figma.codegen.on("generate", ({ node, language }) => {
     if (!node) {
@@ -338,8 +364,8 @@ if (figma.editorType === "dev" && figma.mode === "codegen") {
       ];
     }
 
+    // Default fallback
     return [{ title: "HTML", language: "HTML", code: convertNode(node, 0) }];
   });
 } else {
-  // Allow editor UI to stay open
 }
