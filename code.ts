@@ -25,6 +25,58 @@ if (figma.editorType === "figma") {
 }
 
 // --------------------------------------------------------------
+// UI MESSAGE HANDLER (selection commands, set-fill, etc.)
+// --------------------------------------------------------------
+function hexToRgbNormalized(hex: string) {
+  const cleaned = hex.replace("#", "");
+  const red = parseInt(cleaned.slice(0, 2), 16) / 255;
+  const green = parseInt(cleaned.slice(2, 4), 16) / 255;
+  const blue = parseInt(cleaned.slice(4, 6), 16) / 255;
+  return { r: red, g: green, b: blue };
+}
+
+figma.ui.onmessage = async (message) => {
+  if (!message || typeof message.type !== "string") return;
+
+  if (
+    message.type === "set-fill" &&
+    typeof message.id === "string" &&
+    typeof message.color === "string"
+  ) {
+    try {
+      const node = (await figma.getNodeByIdAsync(message.id)) as SceneNode;
+      if (!node) throw new Error("Node not found");
+
+      // Only support setting a single SOLID fill (hex only, no alpha)
+      const rgb = hexToRgbNormalized(message.color);
+      const paint: SolidPaint = { type: "SOLID", color: rgb } as SolidPaint;
+
+      if ("fills" in node) {
+        (node as any).fills = [paint];
+      } else {
+        throw new Error("Node does not support fills");
+      }
+
+      // Select and scroll into view so the user sees the change
+      figma.currentPage.selection = [node];
+      figma.viewport.scrollAndZoomIntoView([node]);
+
+      // Confirm back to UI
+      figma.ui.postMessage({
+        type: "set-fill-done",
+        id: message.id,
+        color: message.color,
+      });
+    } catch (err) {
+      figma.ui.postMessage({
+        type: "error",
+        message: (err as Error).message || "set-fill failed",
+      });
+    }
+  }
+};
+
+// --------------------------------------------------------------
 // SIMPLE INDENT FUNCTION FOR HTML OUTPUT
 // --------------------------------------------------------------
 function indent(level: number): string {
@@ -39,12 +91,12 @@ function getFillColor(node: SceneNode): string | null {
   if ("fills" in node && Array.isArray(node.fills) && node.fills.length > 0) {
     const paint = node.fills[0];
     if (paint.type === "SOLID") {
-      const r = Math.round(paint.color.r * 255);
-      const g = Math.round(paint.color.g * 255);
-      const b = Math.round(paint.color.b * 255);
-      return `#${r.toString(16).padStart(2, "0")}${g
+      const red = Math.round(paint.color.r * 255);
+      const green = Math.round(paint.color.g * 255);
+      const blue = Math.round(paint.color.b * 255);
+      return `#${red.toString(16).padStart(2, "0")}${green
         .toString(16)
-        .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+        .padStart(2, "0")}${blue.toString(16).padStart(2, "0")}`;
     }
   }
   return null;
@@ -58,11 +110,11 @@ function getStroke(node: SceneNode): { color: string; width: number } | null {
   if ("strokes" in node && node.strokes.length > 0) {
     const paint = node.strokes[0];
     if (paint.type === "SOLID") {
-      const r = Math.round(paint.color.r * 255);
-      const g = Math.round(paint.color.g * 255);
-      const b = Math.round(paint.color.b * 255);
+      const red = Math.round(paint.color.r * 255);
+      const green = Math.round(paint.color.g * 255);
+      const blue = Math.round(paint.color.b * 255);
       return {
-        color: `#${r.toString(16)}${g.toString(16)}${b.toString(16)}`,
+        color: `#${red.toString(16)}${green.toString(16)}${blue.toString(16)}`,
         width: (node as any).strokeWeight || 1,
       };
     }
@@ -74,32 +126,32 @@ function getStroke(node: SceneNode): { color: string; width: number } | null {
 // BUILD INLINE CSS FOR BASIC SHAPES/FRAMES
 // --------------------------------------------------------------
 function buildCSS(node: SceneNode): string {
-  let css = `width:${node.width}px; height:${node.height}px;`;
+  let cssText = `width:${node.width}px; height:${node.height}px;`;
 
   // Absolute position
   if ("x" in node && "y" in node) {
-    css += ` position:absolute; left:${node.x}px; top:${node.y}px;`;
+    cssText += ` position:absolute; left:${node.x}px; top:${node.y}px;`;
   }
 
   // Background
   const fill = getFillColor(node);
-  if (fill) css += ` background:${fill};`;
+  if (fill) cssText += ` background:${fill};`;
 
   // Border
   const stroke = getStroke(node);
-  if (stroke) css += ` border:${stroke.width}px solid ${stroke.color};`;
+  if (stroke) cssText += ` border:${stroke.width}px solid ${stroke.color};`;
 
   // Rotation
   if ("rotation" in node && node.rotation !== 0) {
-    css += ` transform:rotate(${-node.rotation}deg); transform-origin:left top;`;
+    cssText += ` transform:rotate(${-node.rotation}deg); transform-origin:left top;`;
   }
 
   // Corner radius
   if ("cornerRadius" in node && typeof node.cornerRadius === "number") {
-    css += ` border-radius:${node.cornerRadius}px;`;
+    cssText += ` border-radius:${node.cornerRadius}px;`;
   }
 
-  return css;
+  return cssText;
 }
 
 // --------------------------------------------------------------
@@ -113,18 +165,20 @@ function getTag(node: SceneNode): string {
 // CONVERT NODE TO HTML
 // --------------------------------------------------------------
 function convertNode(node: SceneNode, level: number = 0): string {
-  const tag = getTag(node);
+  const htmlTag = getTag(node);
 
   if (node.type === "TEXT") {
-    return convertTextNodeHTML(node as TextNode, tag, level);
+    return convertTextNodeHTML(node as TextNode, htmlTag, level);
   }
 
   if ("children" in node && node.children.length > 0) {
-    return convertFrameHTML(node as FrameNode, tag, level);
+    return convertFrameHTML(node as FrameNode, htmlTag, level);
   }
 
   // shape (rectangle, line, etc.)
-  return `${indent(level)}<${tag} style="${buildCSS(node)}"></${tag}>\n`;
+  return `${indent(level)}<${htmlTag} style="${buildCSS(
+    node
+  )}"></${htmlTag}>\n`;
 }
 
 // --------------------------------------------------------------
@@ -132,51 +186,57 @@ function convertNode(node: SceneNode, level: number = 0): string {
 // --------------------------------------------------------------
 function convertTextNodeHTML(
   node: TextNode,
-  tag: string,
+  htmlTag: string,
   level: number
 ): string {
-  let css = `width:${node.width}px; height:${node.height}px; position:absolute; left:${node.x}px; top:${node.y}px;`;
+  let cssText = `width:${node.width}px; height:${node.height}px; position:absolute; left:${node.x}px; top:${node.y}px;`;
 
   // Fill color
   const fill = getFillColor(node);
-  if (fill) css += ` color:${fill};`;
+  if (fill) cssText += ` color:${fill};`;
 
   // Font size
   if (typeof node.fontSize === "number")
-    css += ` font-size:${node.fontSize}px;`;
+    cssText += ` font-size:${node.fontSize}px;`;
 
   // Font family
   if (node.fontName !== figma.mixed) {
     const font = node.fontName as FontName;
-    css += ` font-family:'${font.family}';`;
+    cssText += ` font-family:'${font.family}';`;
   }
 
   // Text alignment
   switch (node.textAlignHorizontal) {
     case "CENTER":
-      css += " text-align:center;";
+      cssText += " text-align:center;";
       break;
     case "RIGHT":
-      css += " text-align:right;";
+      cssText += " text-align:right;";
       break;
     default:
-      css += " text-align:left;";
+      cssText += " text-align:left;";
   }
 
-  return `${indent(level)}<${tag} style="${css}">${node.characters}</${tag}>\n`;
+  return `${indent(level)}<${htmlTag} style="${cssText}">${
+    node.characters
+  }</${htmlTag}>\n`;
 }
 
 // --------------------------------------------------------------
 // FRAME to HTML <div> WITH CHILDREN
 // --------------------------------------------------------------
-function convertFrameHTML(node: FrameNode, tag: string, level: number): string {
-  let css = `position:absolute; width:${node.width}px; height:${node.height}px; left:${node.x}px; top:${node.y}px;`;
+function convertFrameHTML(
+  node: FrameNode,
+  htmlTag: string,
+  level: number
+): string {
+  let cssText = `position:absolute; width:${node.width}px; height:${node.height}px; left:${node.x}px; top:${node.y}px;`;
 
   const fill = getFillColor(node);
-  if (fill) css += ` background:${fill};`;
+  if (fill) cssText += ` background:${fill};`;
 
   const stroke = getStroke(node);
-  if (stroke) css += ` border:${stroke.width}px solid ${stroke.color};`;
+  if (stroke) cssText += ` border:${stroke.width}px solid ${stroke.color};`;
 
   // Render all children under this frame
   let childrenHTML = "";
@@ -186,26 +246,26 @@ function convertFrameHTML(node: FrameNode, tag: string, level: number): string {
 
   return `${indent(
     level
-  )}<${tag} class="frame" style="${css}">\n${childrenHTML}${indent(
+  )}<${htmlTag} class="frame" style="${cssText}">\n${childrenHTML}${indent(
     level
-  )}</${tag}>\n`;
+  )}</${htmlTag}>\n`;
 }
 
 // --------------------------------------------------------------
 // TAILWIND CONVERTER
 // --------------------------------------------------------------
 function convertNodeTailwind(node: SceneNode, level: number = 0): string {
-  const tag = getTag(node);
+  const htmlTag = getTag(node);
 
   if (node.type === "TEXT") {
-    return convertTextNodeTailwind(node as TextNode, tag, level);
+    return convertTextNodeTailwind(node as TextNode, htmlTag, level);
   }
 
   if ("children" in node && node.children.length > 0) {
-    return convertFrameTailwind(node as FrameNode, tag, level);
+    return convertFrameTailwind(node as FrameNode, htmlTag, level);
   }
 
-  return convertShapeTailwind(node, tag, level);
+  return convertShapeTailwind(node, htmlTag, level);
 }
 
 // --------------------------------------------------------------
@@ -213,7 +273,7 @@ function convertNodeTailwind(node: SceneNode, level: number = 0): string {
 // --------------------------------------------------------------
 function convertShapeTailwind(
   node: SceneNode,
-  tag: string,
+  htmlTag: string,
   level: number
 ): string {
   const width = `w-[${node.width}px]`;
@@ -238,13 +298,19 @@ function convertShapeTailwind(
     classes.push(`border-[${stroke.width}px]`, `border-[${stroke.color}]`);
   }
 
-  return `${indent(level)}<${tag} class="${classes.join(" ")}"></${tag}>\n`;
+  return `${indent(level)}<${htmlTag} class="${classes.join(
+    " "
+  )}"></${htmlTag}>\n`;
 }
 
 // --------------------------------------------------------------
 // TEXT NODE - Tailwind
 // --------------------------------------------------------------
-function convertTextNodeTailwind(node: TextNode, tag: string, level: number) {
+function convertTextNodeTailwind(
+  node: TextNode,
+  htmlTag: string,
+  level: number
+) {
   const textClasses: string[] = [];
 
   const fill = getFillColor(node);
@@ -269,15 +335,15 @@ function convertTextNodeTailwind(node: TextNode, tag: string, level: number) {
       textClasses.push("text-left");
   }
 
-  return `${indent(level)}<${tag} class="${textClasses.join(" ")}">${
+  return `${indent(level)}<${htmlTag} class="${textClasses.join(" ")}">${
     node.characters
-  }</${tag}>\n`;
+  }</${htmlTag}>\n`;
 }
 
 // --------------------------------------------------------------
 // FRAME - Tailwind
 // --------------------------------------------------------------
-function convertFrameTailwind(node: FrameNode, tag: string, level: number) {
+function convertFrameTailwind(node: FrameNode, htmlTag: string, level: number) {
   const classes = [`w-[${node.width}px]`, `h-[${node.height}px]`];
 
   if ("x" in node && "y" in node) {
@@ -294,50 +360,107 @@ function convertFrameTailwind(node: FrameNode, tag: string, level: number) {
     childrenHTML += convertNodeTailwind(child, level + 1);
   }
 
-  return `${indent(level)}<${tag} class="${classes.join(
+  return `${indent(level)}<${htmlTag} class="${classes.join(
     " "
-  )}">\n${childrenHTML}${indent(level)}</${tag}>\n`;
+  )}">\n${childrenHTML}${indent(level)}</${htmlTag}>\n`;
 }
 
 // --------------------------------------------------------------
 // EXTRACT PROPERTIES FOR UI PANEL
 // --------------------------------------------------------------
+/* eslint-disable @typescript-eslint/no-explicit-any */
 function extractNodeProperties(node: SceneNode) {
-  const data: any = {
+  const data: Record<string, any> = {
     id: node.id,
     name: node.name,
     type: node.type,
-    width: node.width,
-    height: node.height,
-    x: "x" in node ? node.x : null,
-    y: "y" in node ? node.y : null,
+    width: typeof node.width === "number" ? node.width : null,
+    height: typeof node.height === "number" ? node.height : null,
+    x:
+      "x" in node && typeof (node as any).x === "number"
+        ? (node as any).x
+        : null,
+    y:
+      "y" in node && typeof (node as any).y === "number"
+        ? (node as any).y
+        : null,
+    rotation:
+      "rotation" in node && typeof (node as any).rotation === "number"
+        ? (node as any).rotation
+        : 0,
   };
 
-  if ("fills" in node && Array.isArray(node.fills) && node.fills.length > 0) {
-    const fillColour = node.fills[0];
-    if (fillColour.type === "SOLID") data.fill = fillColour.color;
-  }
-
-  if ("strokes" in node && node.strokes.length > 0) {
-    const strokeColour = node.strokes[0];
-    if (strokeColour.type === "SOLID") {
-      data.stroke = {
-        width: (node as any).strokeWeight,
-        color: strokeColour.color,
-      };
+  // fills -> normalized hex or null
+  if (
+    "fills" in node &&
+    Array.isArray((node as any).fills) &&
+    (node as any).fills.length > 0
+  ) {
+    const paint = (node as any).fills[0];
+    if (paint && paint.type === "SOLID" && paint.color) {
+      const red = Math.round(paint.color.r * 255);
+      const green = Math.round(paint.color.g * 255);
+      const blue = Math.round(paint.color.b * 255);
+      data.fill = `#${red.toString(16).padStart(2, "0")}${green
+        .toString(16)
+        .padStart(2, "0")}${blue.toString(16).padStart(2, "0")}`;
+    } else {
+      data.fill = null;
     }
   }
 
-  if ("children" in node) {
+  // If the node itself had no fill (GROUPs commonly don't), try to
+  // infer a background from its children (heuristic: first child with a SOLID fill)
+  if (
+    (typeof data.fill === "undefined" || data.fill === null) &&
+    "children" in node &&
+    Array.isArray((node as any).children) &&
+    node.children.length > 0
+  ) {
+    for (const child of node.children) {
+      const childFill = getFillColor(child as SceneNode);
+      if (childFill) {
+        data.fill = childFill; // use first found child fill as a fallback
+        break;
+      }
+    }
+  }
+
+  // Text-specific
+  if (node.type === "TEXT") {
+    const textNode = node as TextNode;
+    data.characters = textNode.characters;
+    data.fontSize =
+      typeof textNode.fontSize === "number" ? textNode.fontSize : null;
+    if (textNode.fontName !== figma.mixed) {
+      const font = textNode.fontName as FontName;
+      data.fontFamily = font.family;
+      data.fontStyle = font.style;
+    }
+    data.textAlignHorizontal = textNode.textAlignHorizontal || null;
+  }
+
+  // children list (just IDs+names for the UI)
+  if ("children" in node && Array.isArray((node as any).children)) {
     data.children = node.children.map((child) => ({
       id: child.id,
-      type: child.type,
       name: child.name,
+      type: child.type,
+      // optionally include width/height/x/y if you want nested details:
+      width: (child as any).width ?? null,
+      height: (child as any).height ?? null,
+      x: (child as any).x ?? null,
+      y: (child as any).y ?? null,
+      // include child's fill (null if none) so UI can inspect child fills
+      fill: getFillColor(child as SceneNode),
     }));
+  } else {
+    data.children = [];
   }
 
   return data;
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // --------------------------------------------------------------
 // CODEGEN MODE — RETURN HTML OR TAILWIND
@@ -367,5 +490,4 @@ if (figma.editorType === "dev" && figma.mode === "codegen") {
     // Default fallback
     return [{ title: "HTML", language: "HTML", code: convertNode(node, 0) }];
   });
-} else {
 }
