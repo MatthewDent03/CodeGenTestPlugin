@@ -68,7 +68,7 @@ function getStroke(node: SceneNode): { color: string; width: number } | null {
 // ======================================================
 // RAW CSS BUILDER
 // ======================================================
-function buildCSS(node: SceneNode): string {
+function buildCSS(node: SceneNode, parent?: SceneNode): string {
   let css = `width:${node.width}px; height:${node.height}px;`;
 
   if ("x" in node && "y" in node) {
@@ -89,6 +89,13 @@ function buildCSS(node: SceneNode): string {
     css += ` border-radius:${node.cornerRadius}px;`;
   }
 
+  // Add margin relative to parent if available
+  if (parent && "x" in parent && "y" in parent) {
+    const marginTop = node.y - parent.y;
+    const marginLeft = node.x - parent.x;
+    css += ` margin-top:${marginTop}px; margin-left:${marginLeft}px;`;
+  }
+
   return css;
 }
 
@@ -102,24 +109,32 @@ function getTag(node: SceneNode): string {
 // ======================================================
 // HTML CONVERTER
 // ======================================================
-function convertNode(node: SceneNode, level: number = 0): string {
+function convertNode(
+  node: SceneNode,
+  level: number = 0,
+  parent?: SceneNode
+): string {
   const tag = getTag(node);
 
   if (node.type === "TEXT") {
-    return convertTextNodeHTML(node as TextNode, tag, level);
+    return convertTextNodeHTML(node as TextNode, tag, level, parent);
   }
 
   if ("children" in node && node.children.length > 0) {
-    return convertFrameHTML(node as FrameNode, tag, level);
+    return convertFrameHTML(node as FrameNode, tag, level, parent);
   }
 
-  return `${indent(level)}<${tag} style="${buildCSS(node)}"></${tag}>\n`;
+  return `${indent(level)}<${tag} style="${buildCSS(
+    node,
+    parent
+  )}"></${tag}>\n`;
 }
 
 function convertTextNodeHTML(
   node: TextNode,
   tag: string,
-  level: number
+  level: number,
+  parent?: SceneNode
 ): string {
   let css = `width:${node.width}px; height:${node.height}px; position:absolute; left:${node.x}px; top:${node.y}px;`;
 
@@ -145,10 +160,22 @@ function convertTextNodeHTML(
       css += " text-align:left;";
   }
 
+  // Add margin relative to parent
+  if (parent && "x" in parent && "y" in parent) {
+    const marginTop = node.y - parent.y;
+    const marginLeft = node.x - parent.x;
+    css += ` margin-top:${marginTop}px; margin-left:${marginLeft}px;`;
+  }
+
   return `${indent(level)}<${tag} style="${css}">${node.characters}</${tag}>\n`;
 }
 
-function convertFrameHTML(node: FrameNode, tag: string, level: number): string {
+function convertFrameHTML(
+  node: FrameNode,
+  tag: string,
+  level: number,
+  parent?: SceneNode
+): string {
   let css = `position:absolute; width:${node.width}px; height:${node.height}px; left:${node.x}px; top:${node.y}px;`;
 
   const fill = getFillColor(node);
@@ -157,9 +184,16 @@ function convertFrameHTML(node: FrameNode, tag: string, level: number): string {
   const stroke = getStroke(node);
   if (stroke) css += ` border:${stroke.width}px solid ${stroke.color};`;
 
+  // Add margin relative to parent
+  if (parent && "x" in parent && "y" in parent) {
+    const marginTop = node.y - parent.y;
+    const marginLeft = node.x - parent.x;
+    css += ` margin-top:${marginTop}px; margin-left:${marginLeft}px;`;
+  }
+
   let childrenHTML = "";
   for (const child of node.children) {
-    childrenHTML += convertNode(child, level + 1);
+    childrenHTML += convertNode(child, level + 1, node);
   }
 
   return `${indent(
@@ -170,26 +204,30 @@ function convertFrameHTML(node: FrameNode, tag: string, level: number): string {
 }
 
 // ======================================================
-// TAILWIND CONVERTER
-// ======================================================
-function convertNodeTailwind(node: SceneNode, level: number = 0): string {
+// TAILWIND CONVERTER (with margin)
+function convertNodeTailwind(
+  node: SceneNode,
+  level: number = 0,
+  parent?: SceneNode
+): string {
   const tag = getTag(node);
 
   if (node.type === "TEXT") {
-    return convertTextNodeTailwind(node as TextNode, tag, level);
+    return convertTextNodeTailwind(node as TextNode, tag, level, parent);
   }
 
   if ("children" in node && node.children.length > 0) {
-    return convertFrameTailwind(node as FrameNode, tag, level);
+    return convertFrameTailwind(node as FrameNode, tag, level, parent);
   }
 
-  return convertShapeTailwind(node, tag, level);
+  return convertShapeTailwind(node, tag, level, parent);
 }
 
 function convertShapeTailwind(
   node: SceneNode,
   tag: string,
-  level: number
+  level: number,
+  parent?: SceneNode
 ): string {
   const widthClass = `w-[${node.width}px]`;
   const heightClass = `h-[${node.height}px]`;
@@ -214,11 +252,24 @@ function convertShapeTailwind(
     classes.push(`border-[${stroke.color}]`);
   }
 
+  // Margin relative to parent
+  if (parent) {
+    const marginTop = node.y - parent.y;
+    const marginLeft = node.x - parent.x;
+    classes.push(`mt-[${marginTop}px]`);
+    classes.push(`ml-[${marginLeft}px]`);
+  }
+
   return `${indent(level)}<${tag} class="${classes.join(" ")}"></${tag}>\n`;
 }
 
-function convertTextNodeTailwind(node: TextNode, tag: string, level: number) {
-  const base = convertShapeTailwind(node, tag, level);
+function convertTextNodeTailwind(
+  node: TextNode,
+  tag: string,
+  level: number,
+  parent?: SceneNode
+) {
+  const base = convertShapeTailwind(node, tag, level, parent);
   const textClasses: string[] = [];
 
   const fill = getFillColor(node);
@@ -249,7 +300,12 @@ function convertTextNodeTailwind(node: TextNode, tag: string, level: number) {
   }</${tag}>\n`;
 }
 
-function convertFrameTailwind(node: FrameNode, tag: string, level: number) {
+function convertFrameTailwind(
+  node: FrameNode,
+  tag: string,
+  level: number,
+  parent?: SceneNode
+) {
   const classes = [`w-[${node.width}px]`, `h-[${node.height}px]`];
 
   if ("x" in node && "y" in node) {
@@ -261,9 +317,17 @@ function convertFrameTailwind(node: FrameNode, tag: string, level: number) {
   const fill = getFillColor(node);
   if (fill) classes.push(`bg-[${fill}]`);
 
+  // Margin relative to parent
+  if (parent) {
+    const marginTop = node.y - parent.y;
+    const marginLeft = node.x - parent.x;
+    classes.push(`mt-[${marginTop}px]`);
+    classes.push(`ml-[${marginLeft}px]`);
+  }
+
   let childrenHTML = "";
   for (const child of node.children) {
-    childrenHTML += convertNodeTailwind(child, level + 1);
+    childrenHTML += convertNodeTailwind(child, level + 1, node);
   }
 
   return `${indent(level)}<${tag} class="${classes.join(
@@ -272,8 +336,7 @@ function convertFrameTailwind(node: FrameNode, tag: string, level: number) {
 }
 
 // ======================================================
-// PROPERTY EXTRACTOR FOR UI
-// ======================================================
+// PROPERTY EXTRACTOR FOR UI (with margin)
 function extractNodeProperties(node: SceneNode) {
   const data: any = {
     id: node.id,
@@ -303,11 +366,25 @@ function extractNodeProperties(node: SceneNode) {
   }
 
   if ("children" in node) {
-    data.children = node.children.map((child) => ({
-      id: child.id,
-      type: child.type,
-      name: child.name,
-    }));
+    data.children = node.children.map((child) => {
+      const childData: any = {
+        id: child.id,
+        type: child.type,
+        name: child.name,
+      };
+
+      // Calculate margin relative to parent
+      if ("x" in child && "y" in child) {
+        childData.margin = {
+          top: child.y - node.y,
+          left: child.x - node.x,
+          right: node.width - (child.x - node.x + (child as any).width),
+          bottom: node.height - (child.y - node.y + (child as any).height),
+        };
+      }
+
+      return childData;
+    });
   }
 
   return data;
