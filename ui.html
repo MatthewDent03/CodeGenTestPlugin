@@ -2,241 +2,75 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Node Viewer</title>
+    <title>Node Properties Viewer</title>
 
     <style>
       body {
-        font-family: sans-serif;
+        font-family: system-ui, sans-serif;
         margin: 0;
         padding: 12px;
         font-size: 12px;
+        background: #ffffff;
       }
 
-      #status {
-        color: #777;
-        font-style: italic;
-        margin-bottom: 8px;
+      h3 {
+        margin-top: 0;
+        font-size: 13px;
       }
 
-      /* JSON output area */
-      #props {
-        background: #f2f2f2;
-        padding: 8px;
-        border-radius: 4px;
+      #node-json {
+        margin-top: 8px;
         max-height: 260px;
         overflow: auto;
+        background: #f5f5f5;
+        border-radius: 4px;
+        padding: 8px;
         font-family: monospace;
-        white-space: pre;
         font-size: 11px;
+        white-space: pre;
+      }
+
+      .no-selection {
+        color: #777;
+        font-style: italic;
       }
     </style>
   </head>
 
   <body>
-    <!-- Title text -->
-    <h3>Selected Node</h3>
+    <h3>Selected Node Properties</h3>
 
-    <!-- Selection status text -->
-    <p id="status">No selection.</p>
+    <p class="no-selection" id="selection-status">No selection yet.</p>
 
-    <!-- JSON property display -->
-    <p id="props"></p>
-
-    <!-- Selected node swatch (single-node preview) -->
-    <div id="selected-swatch"></div>
-
-    <!-- Children list with color swatches -->
-    <div id="children-list"></div>
-
-    <style>
-      .child-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 0;
-        font-size: 12px;
-      }
-      .swatch {
-        width: 16px;
-        height: 16px;
-        display: inline-block;
-        border: 1px solid rgba(0, 0, 0, 0.12);
-        border-radius: 3px;
-      }
-      .child-meta {
-        color: #444;
-      }
-      .child-fill {
-        color: #666;
-        font-family: monospace;
-        margin-left: 6px;
-      }
-    </style>
+    <pre id="node-json"></pre>
 
     <script>
-      // Receive messages from code.ts and show selection details + child swatches
       window.onmessage = (event) => {
-        const message = event.data.pluginMessage;
-        if (!message) return;
+        const msg = event.data.pluginMessage;
+        if (!msg) return;
 
-        if (message.type === "selection-update") {
-          const node = message.data;
-          console.log(
-            "x:",
-            node.x,
-            "y:",
-            node.y,
-            "width:",
-            node.width,
-            "height:",
-            node.height
-          );
+        if (msg.type === "selection-update") {
           document.getElementById(
-            "status"
-          ).textContent = `${node.name} (${node.type})`;
-          document.getElementById("props").textContent = JSON.stringify(
-            node,
+            "selection-status"
+          ).textContent = `Selected: ${msg.data.name} (${msg.data.type})`;
+          document
+            .getElementById("selection-status")
+            .classList.remove("no-selection");
+
+          document.getElementById("node-json").textContent = JSON.stringify(
+            msg.data,
             null,
             2
           );
-
-          // Selected node swatch (shows a swatch for the selected node itself)
-          const selectedSwatchEl = document.getElementById("selected-swatch");
-          selectedSwatchEl.innerHTML = "";
-          const selectedRowEl = document.createElement("div");
-          selectedRowEl.className = "child-item";
-          const selectedSwatchSpanEl = document.createElement("span");
-          selectedSwatchSpanEl.className = "swatch";
-          if (node.fill) {
-            selectedSwatchSpanEl.style.background = node.fill; // hex color
-          } else {
-            selectedSwatchSpanEl.style.background =
-              "linear-gradient(45deg,#eee 25%,transparent 25%,transparent 75%,#eee 75%,#eee),linear-gradient(45deg,#eee 25%,transparent 25%,transparent 75%,#eee 75%,#eee)";
-            selectedSwatchSpanEl.style.backgroundSize = "8px 8px";
-            selectedSwatchSpanEl.style.backgroundPosition = "0 0,4px 4px";
-          }
-          const selectedMetaEl = document.createElement("div");
-          selectedMetaEl.className = "child-meta";
-          selectedMetaEl.textContent = `${node.name} (${node.type})`;
-          const selectedFillTextEl = document.createElement("span");
-          selectedFillTextEl.className = "child-fill";
-          selectedFillTextEl.textContent = node.fill ? node.fill : "none";
-
-          // native color input for editing the selected node's color
-          const selectedColorPickerEl = document.createElement("input");
-          selectedColorPickerEl.type = "color";
-          selectedColorPickerEl.style.display = "none";
-          try {
-            selectedColorPickerEl.value = node.fill ? node.fill : "#ffffff";
-          } catch (err) {
-            selectedColorPickerEl.value = "#ffffff";
-          }
-          selectedSwatchSpanEl.addEventListener("click", () => {
-            if (!node.fill) return;
-            selectedColorPickerEl.click();
-          });
-          selectedColorPickerEl.addEventListener("input", () => {
-            const newHex = selectedColorPickerEl.value;
-            parent.postMessage(
-              {
-                pluginMessage: { type: "set-fill", id: node.id, color: newHex },
-              },
-              "*"
-            );
-            selectedSwatchSpanEl.style.background = newHex;
-            selectedFillTextEl.textContent = newHex;
-          });
-
-          selectedRowEl.appendChild(selectedSwatchSpanEl);
-          selectedRowEl.appendChild(selectedMetaEl);
-          selectedRowEl.appendChild(selectedFillTextEl);
-          selectedRowEl.appendChild(selectedColorPickerEl);
-          selectedSwatchEl.appendChild(selectedRowEl);
-
-          const childrenListEl = document.getElementById("children-list");
-          childrenListEl.innerHTML = "";
-          if (
-            node.children &&
-            Array.isArray(node.children) &&
-            node.children.length > 0
-          ) {
-            const wrapperEl = document.createElement("div");
-            for (const childNode of node.children) {
-              const rowEl = document.createElement("div");
-              rowEl.className = "child-item";
-
-              const swatchEl = document.createElement("span");
-              swatchEl.className = "swatch";
-              if (childNode.fill) {
-                // child.fill expected as hex string '#rrggbb'
-                swatchEl.style.background = childNode.fill;
-              } else {
-                // show a subtle checker or transparent look
-                swatchEl.style.background =
-                  "linear-gradient(45deg,#eee 25%,transparent 25%,transparent 75%,#eee 75%,#eee),linear-gradient(45deg,#eee 25%,transparent 25%,transparent 75%,#eee 75%,#eee)";
-                swatchEl.style.backgroundSize = "8px 8px";
-                swatchEl.style.backgroundPosition = "0 0,4px 4px";
-              }
-
-              // (color picker will be created after fill text element so it can update the UI text)
-
-              const metaEl = document.createElement("div");
-              metaEl.className = "child-meta";
-              metaEl.textContent = `${childNode.name} (${childNode.type})`;
-
-              const fillTextEl = document.createElement("span");
-              fillTextEl.className = "child-fill";
-              fillTextEl.textContent = childNode.fill ? childNode.fill : "none";
-
-              // hidden native color input for editing this child's color
-              const colorPickerEl = document.createElement("input");
-              colorPickerEl.type = "color";
-              colorPickerEl.style.display = "none";
-              try {
-                colorPickerEl.value = childNode.fill
-                  ? childNode.fill
-                  : "#ffffff";
-              } catch (err) {
-                colorPickerEl.value = "#ffffff";
-              }
-              // When swatch clicked, open the native color picker
-              swatchEl.addEventListener("click", () => {
-                // disable picker for non-solid fills (represented with missing fill)
-                if (!childNode.fill) return;
-                colorPickerEl.click();
-              });
-              // When a color is chosen, send to plugin to set fill
-              colorPickerEl.addEventListener("input", () => {
-                const newHex = colorPickerEl.value;
-                parent.postMessage(
-                  {
-                    pluginMessage: {
-                      type: "set-fill",
-                      id: childNode.id,
-                      color: newHex,
-                    },
-                  },
-                  "*"
-                );
-                // update UI immediately for responsiveness
-                swatchEl.style.background = newHex;
-                fillTextEl.textContent = newHex;
-              });
-
-              rowEl.appendChild(swatchEl);
-              rowEl.appendChild(metaEl);
-              rowEl.appendChild(fillTextEl);
-              rowEl.appendChild(colorPickerEl);
-              wrapperEl.appendChild(rowEl);
-            }
-            childrenListEl.appendChild(wrapperEl);
-          }
         }
 
         if (msg.type === "no-selection") {
-          document.getElementById("status").textContent = "No selection.";
-          document.getElementById("props").textContent = "";
-          document.getElementById("children-list").innerHTML = "";
+          document.getElementById("selection-status").textContent =
+            "No node selected.";
+          document
+            .getElementById("selection-status")
+            .classList.add("no-selection");
+          document.getElementById("node-json").textContent = "";
         }
       };
     </script>
