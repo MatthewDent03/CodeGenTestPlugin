@@ -34,18 +34,32 @@ function indent(level: number): string {
 // COMPUTE MARGINS HELPER
 // Compute top/left/right/bottom (px) of `node` relative to `parent`.
 // ======================================================
+
 function computeMargins(node: SceneNode, parent: SceneNode) {
+  if (parent.type === "FRAME") {
+    return computeMarginsWithFrame(node, parent);
+  } else {
+    return computeMarginsNotFrame(node, parent);
+  }
+}
+
+function computeMarginsWithFrame(node: SceneNode, parent: SceneNode) {
   // assume both node and parent have x/y/width/height where applicable
-  const top = "y" in node && "y" in parent ? node.y - parent.y : 0;
-  const left = "x" in node && "x" in parent ? node.x - parent.x : 0;
-  const right =
-    "width" in parent && "x" in node && "x" in parent
-      ? parent.width - (node.x - parent.x + (node as any).width)
-      : 0;
-  const bottom =
-    "height" in parent && "y" in node && "y" in parent
-      ? parent.height - (node.y - parent.y + (node as any).height)
-      : 0;
+  const top = node.y;
+  const left = node.x;
+  const right = parent.width - node.width - left;
+  const bottom = parent.height - node.height - top;
+  const x = { top, left, right, bottom };
+  console.log(node, parent, x);
+  return x;
+}
+
+function computeMarginsNotFrame(node: SceneNode, parent: SceneNode) {
+  // assume both node and parent have x/y/width/height where applicable
+  const top = node.y - parent.y;
+  const left = node.x - parent.x;
+  const right = parent.width - (node.x - parent.x + node.width);
+  const bottom = parent.height - (node.y - parent.y + node.height);
   return { top, left, right, bottom };
 }
 
@@ -380,56 +394,83 @@ function convertFrameTailwind(
 // PROPERTY EXTRACTOR FOR UI (with margin)
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function extractNodeProperties(node: SceneNode) {
-  const data: any = {
+  // Build a serializable object that mirrors the node's own property names
+  // while keeping a couple of backward-compatible keys (`fill`, `stroke`).
+  const out: any = {
     id: node.id,
     name: node.name,
     type: node.type,
-    width: node.width,
-    height: node.height,
-    x: "x" in node ? node.x : null,
-    y: "y" in node ? node.y : null,
   };
 
-  if ("fills" in node && Array.isArray(node.fills) && node.fills.length > 0) {
-    const f = node.fills[0];
-    if (f.type === "SOLID") {
-      data.fill = f.color;
-    }
+  // Copy common geometry / transform properties if present
+  if ("width" in node) out.width = (node as any).width;
+  if ("height" in node) out.height = (node as any).height;
+  if ("x" in node) out.x = (node as any).x;
+  if ("y" in node) out.y = (node as any).y;
+  if ("rotation" in node) out.rotation = (node as any).rotation;
+  if ("cornerRadius" in node) out.cornerRadius = (node as any).cornerRadius;
+
+  // Text properties
+  if (node.type === "TEXT") {
+    const t = node as TextNode;
+    if (typeof t.fontSize === "number") out.fontSize = t.fontSize;
+    if (t.fontName !== figma.mixed) out.fontName = t.fontName as FontName;
+    out.characters = t.characters;
+    out.textAlignHorizontal = t.textAlignHorizontal;
   }
 
-  if ("strokes" in node && node.strokes.length > 0) {
-    const s = node.strokes[0];
-    if (s.type === "SOLID") {
-      data.stroke = {
-        width: (node as any).strokeWeight,
-        color: s.color,
-      };
+  // Fills / strokes (keep raw simplified arrays)
+  if ("fills" in node) {
+    try {
+      out.fills = Array.isArray((node as any).fills)
+        ? (node as any).fills.map((p: any) => {
+            if (!p) return p;
+            if (p.type === "SOLID")
+              return { type: "SOLID", color: p.color, opacity: p.opacity };
+            return { type: p.type };
+          })
+        : (node as any).fills;
+    } catch (e) {
+      out.fills = (node as any).fills;
     }
+    // backward-compatible single-fill hex
+    const singleFill = getFillColor(node);
+    if (singleFill) out.fill = singleFill;
   }
 
+  if ("strokes" in node) {
+    try {
+      out.strokes = Array.isArray((node as any).strokes)
+        ? (node as any).strokes.map((s: any) => {
+            if (!s) return s;
+            if (s.type === "SOLID")
+              return { type: "SOLID", color: s.color, opacity: s.opacity };
+            return { type: s.type };
+          })
+        : (node as any).strokes;
+    } catch (e) {
+      out.strokes = (node as any).strokes;
+    }
+    if ((node as any).strokeWeight)
+      out.strokeWeight = (node as any).strokeWeight;
+    const firstStroke = getStroke(node);
+    if (firstStroke) out.stroke = firstStroke; // backward-compatible
+  }
+
+  // Children: recursively serialize and include computed margin
   if ("children" in node) {
-    data.children = node.children.map((child) => {
-      const childData: any = {
-        id: child.id,
-        type: child.type,
-        name: child.name,
-      };
-
-      // Calculate margin relative to parent
-      if ("x" in child && "y" in child) {
-        childData.margin = {
-          top: child.y - node.y,
-          left: child.x - node.x,
-          right: node.width - (child.x - node.x + (child as any).width),
-          bottom: node.height - (child.y - node.y + (child as any).height),
-        };
+    out.children = (node as any).children.map((child: SceneNode) => {
+      const childOut: any = extractNodeProperties(child as SceneNode);
+      // compute margin relative to this node
+      if ("x" in child && "y" in child && "x" in node && "y" in node) {
+        const m = computeMargins(child as SceneNode, node as SceneNode);
+        childOut.margin = m;
       }
-
-      return childData;
+      return childOut;
     });
   }
 
-  return data;
+  return out;
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
