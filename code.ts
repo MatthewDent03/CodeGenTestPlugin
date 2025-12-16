@@ -70,17 +70,8 @@ function buildCSS(
   // Absolute positioning for non-flex. If a parent is provided,
   // use coordinates relative to the parent for nested elements.
   if (!inFlex && "x" in node && "y" in node) {
-    if (isRoot) {
-      css += ` position:relative; left:0px; top:0px;`;
-    } else {
-      // Root children should use raw x/y; deeper descendants relative to parent
-      const useRelative = !!parent && !isChildOfRoot;
-      const left =
-        useRelative && "x" in parent ? node.x - (parent as any).x : node.x;
-      const top =
-        useRelative && "y" in parent ? node.y - (parent as any).y : node.y;
-      css += ` position:absolute; left:${left}px; top:${top}px;`;
-    }
+    // Use margin-based layout: only set position, do not emit left/top
+    css += isRoot ? ` position:absolute;` : ` position:absolute;`;
   }
 
   const fill = getFillColor(node);
@@ -98,6 +89,37 @@ function buildCSS(
   }
 
   return css;
+}
+
+// ======================================================
+// MARGIN HELPERS (absolute layouts)
+// ======================================================
+function computeMargins(node: SceneNode, parent: SceneNode) {
+  // For auto-layout parents, spacing is modeled via padding and gap.
+  if ("layoutMode" in parent && (parent as FrameNode).layoutMode !== "NONE") {
+    return { top: 0, left: 0, right: 0, bottom: 0 };
+  }
+  if (parent.type === "FRAME") {
+    return computeMarginsWithFrame(node, parent);
+  } else {
+    return computeMarginsNotFrame(node, parent);
+  }
+}
+
+function computeMarginsWithFrame(node: SceneNode, parent: SceneNode) {
+  const top = (node as any).y ?? 0;
+  const left = (node as any).x ?? 0;
+  const right = (parent as any).width - (node as any).width - left;
+  const bottom = (parent as any).height - (node as any).height - top;
+  return { top, left, right, bottom };
+}
+
+function computeMarginsNotFrame(node: SceneNode, parent: SceneNode) {
+  const top = ((node as any).y ?? 0) - ((parent as any).y ?? 0);
+  const left = ((node as any).x ?? 0) - ((parent as any).x ?? 0);
+  const right = (parent as any).width - (left + (node as any).width);
+  const bottom = (parent as any).height - (top + (node as any).height);
+  return { top, left, right, bottom };
 }
 
 // ======================================================
@@ -170,12 +192,8 @@ function convertTextNode(
 ): string {
   let css = `width:${node.width}px; height:${node.height}px;`;
   if (!inFlex) {
-    const useRelative = !!parent && !isChildOfRoot;
-    const left =
-      useRelative && "x" in parent ? node.x - (parent as any).x : node.x;
-    const top =
-      useRelative && "y" in parent ? node.y - (parent as any).y : node.y;
-    css += ` position:absolute; left:${left}px; top:${top}px;`;
+    // Margin-based layout: keep position without left/top
+    css += ` position:absolute;`;
   }
 
   const fill = getFillColor(node);
@@ -217,7 +235,10 @@ function convertFrameAbsolute(
     // If this node is the root of the conversion (no parent passed to it),
     // then its direct children are children of root.
     const childIsChildOfRoot = parent == null;
-    childrenHtml += convertNode(
+    // Compute margins relative to this absolute container
+    const m = computeMargins(child, node);
+    // Generate child HTML first
+    let childHtml = convertNode(
       child,
       level + 1,
       node,
@@ -225,6 +246,18 @@ function convertFrameAbsolute(
       childIsChildOfRoot,
       false
     );
+    // Inject margin into the child's style attribute for absolute layouts
+    const inject = `margin:${m.top}px ${m.right}px ${m.bottom}px ${m.left}px; `;
+    const styleIdx = childHtml.indexOf('style="');
+    if (styleIdx !== -1) {
+      const before = childHtml.slice(0, styleIdx + 7); // include style="
+      let after = childHtml.slice(styleIdx + 7);
+      // Remove absolute left/top so margins control spacing
+      after = after.replace(/left:\s*[-\d.]+px;\s*/gi, "");
+      after = after.replace(/top:\s*[-\d.]+px;\s*/gi, "");
+      childHtml = before + inject + after;
+    }
+    childrenHtml += childHtml;
   }
   return `${indent(level)}<${tag} style="${css}">\n${childrenHtml}${indent(
     level
@@ -337,18 +370,10 @@ function convertFrameFlex(
   let containerPos = "";
   if ("x" in node && "y" in node) {
     if (isRoot) {
-      containerPos = ` position:relative; left:0px; top:0px;`;
+      containerPos = ` position:relative;`;
     } else {
-      const useRelative = !!parent && !isChildOfRoot;
-      const left =
-        useRelative && parent && "x" in parent
-          ? node.x - (parent as any).x
-          : node.x;
-      const top =
-        useRelative && parent && "y" in parent
-          ? node.y - (parent as any).y
-          : node.y;
-      containerPos = ` position:relative; left:${left}px; top:${top}px;`;
+      // Margin-based layout for flex containers: no left/top
+      containerPos = ` position:relative;`;
     }
   }
 
