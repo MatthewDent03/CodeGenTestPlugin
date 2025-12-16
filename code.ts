@@ -26,12 +26,12 @@ function indent(level: number): string {
 // COLOR & BORDER HELPERS
 // ======================================================
 function rgbToHex(color: RGB): string {
-  const r = Math.round(color.r * 255);
-  const g = Math.round(color.g * 255);
-  const b = Math.round(color.b * 255);
-  return `#${r.toString(16).padStart(2, "0")}${g
+  const red = Math.round(color.r * 255);
+  const green = Math.round(color.g * 255);
+  const blue = Math.round(color.b * 255);
+  return `#${red.toString(16).padStart(2, "0")}${green
     .toString(16)
-    .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+    .padStart(2, "0")}${blue.toString(16).padStart(2, "0")}`;
 }
 
 function getFillColor(node: SceneNode): string | null {
@@ -236,7 +236,7 @@ function convertFrameAbsolute(
     // then its direct children are children of root.
     const childIsChildOfRoot = parent == null;
     // Compute margins relative to this absolute container
-    const m = computeMargins(child, node);
+    const margins = computeMargins(child, node);
     // Generate child HTML first
     let childHtml = convertNode(
       child,
@@ -247,15 +247,15 @@ function convertFrameAbsolute(
       false
     );
     // Inject margin into the child's style attribute for absolute layouts
-    const inject = `margin:${m.top}px ${m.right}px ${m.bottom}px ${m.left}px; `;
-    const styleIdx = childHtml.indexOf('style="');
-    if (styleIdx !== -1) {
-      const before = childHtml.slice(0, styleIdx + 7); // include style="
-      let after = childHtml.slice(styleIdx + 7);
+    const marginInjection = `margin:${margins.top}px ${margins.right}px ${margins.bottom}px ${margins.left}px; `;
+    const styleIndex = childHtml.indexOf('style="');
+    if (styleIndex !== -1) {
+      const beforeStyle = childHtml.slice(0, styleIndex + 7); // include style="
+      let afterStyle = childHtml.slice(styleIndex + 7);
       // Remove absolute left/top so margins control spacing
-      after = after.replace(/left:\s*[-\d.]+px;\s*/gi, "");
-      after = after.replace(/top:\s*[-\d.]+px;\s*/gi, "");
-      childHtml = before + inject + after;
+      afterStyle = afterStyle.replace(/left:\s*[-\d.]+px;\s*/gi, "");
+      afterStyle = afterStyle.replace(/top:\s*[-\d.]+px;\s*/gi, "");
+      childHtml = beforeStyle + marginInjection + afterStyle;
     }
     childrenHtml += childHtml;
   }
@@ -323,15 +323,19 @@ function convertFrameFlex(
     STRETCH: "stretch",
     AUTO: "normal",
   };
+  const counterAxisAlignContentValue = (node as any).counterAxisAlignContent;
   const alignContent =
-    alignContentMap[(node as any).counterAxisAlignContent] || "normal";
+    alignContentMap[counterAxisAlignContentValue] || "normal";
 
   // Gap and padding
   const gapValue = typeof node.itemSpacing === "number" ? node.itemSpacing : 0;
-  const pL = typeof node.paddingLeft === "number" ? node.paddingLeft : 0;
-  const pR = typeof node.paddingRight === "number" ? node.paddingRight : 0;
-  const pT = typeof node.paddingTop === "number" ? node.paddingTop : 0;
-  const pB = typeof node.paddingBottom === "number" ? node.paddingBottom : 0;
+  const paddingLeft =
+    typeof node.paddingLeft === "number" ? node.paddingLeft : 0;
+  const paddingRight =
+    typeof node.paddingRight === "number" ? node.paddingRight : 0;
+  const paddingTop = typeof node.paddingTop === "number" ? node.paddingTop : 0;
+  const paddingBottom =
+    typeof node.paddingBottom === "number" ? node.paddingBottom : 0;
 
   // Positioning of the flex container itself: use root-aware rules
   let containerPos = "";
@@ -350,7 +354,7 @@ function convertFrameFlex(
     wrap === "nowrap" ? "" : ` align-content:${alignContent};`;
   // Omit flex-wrap when flex-flow already includes it
   const wrapCss = wrap === "nowrap" || flexFlow ? "" : ` flex-wrap:${wrap};`;
-  const css = `display:flex;${flexFlow} flex-direction:${direction};${wrapCss} justify-content:${justify}; align-items:${align};${alignContentCss}${gapCss} padding:${pT}px ${pR}px ${pB}px ${pL}px; width:${node.width}px; height:${node.height}px;${containerPos}`;
+  const css = `display:flex;${flexFlow} flex-direction:${direction};${wrapCss} justify-content:${justify}; align-items:${align};${alignContentCss}${gapCss} padding:${paddingTop}px ${paddingRight}px ${paddingBottom}px ${paddingLeft}px; width:${node.width}px; height:${node.height}px;${containerPos}`;
 
   let childrenHtml = "";
   for (const child of node.children) {
@@ -383,11 +387,12 @@ function extractNodeProperties(node: SceneNode): any {
   if ("cornerRadius" in node) out.cornerRadius = node.cornerRadius;
 
   if (node.type === "TEXT") {
-    const t = node as TextNode;
-    if (typeof t.fontSize === "number") out.fontSize = t.fontSize;
-    if (t.fontName !== figma.mixed) out.fontName = t.fontName as FontName;
-    out.characters = t.characters;
-    out.textAlignHorizontal = t.textAlignHorizontal;
+    const textNode = node as TextNode;
+    if (typeof textNode.fontSize === "number") out.fontSize = textNode.fontSize;
+    if (textNode.fontName !== figma.mixed)
+      out.fontName = textNode.fontName as FontName;
+    out.characters = textNode.characters;
+    out.textAlignHorizontal = textNode.textAlignHorizontal;
   }
 
   if ("fills" in node) {
