@@ -299,65 +299,32 @@ function convertFrameFlex(
   // Flex-flow combines direction and wrap
   const flexFlow = wrap !== "nowrap" ? ` flex-flow:${wrap};` : "";
 
-  // Justify-content maps Figma primaryAxisAlignItems
-  let justify = "flex-start";
-  switch (node.primaryAxisAlignItems) {
-    case "CENTER":
-      justify = "center";
-      break;
-    case "MAX":
-      justify = "flex-end";
-      break;
-    case "SPACE_BETWEEN":
-      justify = "space-between";
-      break;
-    default:
-      justify = "flex-start";
-  }
+  // Map Figma alignment properties to CSS values
+  const justifyMap: Record<string, string> = {
+    CENTER: "center",
+    MAX: "flex-end",
+    SPACE_BETWEEN: "space-between",
+    MIN: "flex-start",
+  };
+  const justify = justifyMap[node.primaryAxisAlignItems] || "flex-start";
 
-  // Align-items maps Figma counterAxisAlignItems
-  let align = "stretch";
-  switch (node.counterAxisAlignItems) {
-    case "CENTER":
-      align = "center";
-      break;
-    case "MAX":
-      align = "flex-end";
-      break;
-    case "MIN":
-      align = "flex-start";
-      break;
-    default:
-      align = "stretch";
-  }
+  const alignMap: Record<string, string> = {
+    CENTER: "center",
+    MAX: "flex-end",
+    MIN: "flex-start",
+  };
+  const align = alignMap[node.counterAxisAlignItems] || "stretch";
 
-  // Align-content for multi-line distribution when wrapping
-  let alignContent = "normal";
-  if ("counterAxisAlignContent" in node) {
-    const cac = (node as any).counterAxisAlignContent;
-    switch (cac) {
-      case "CENTER":
-        alignContent = "center";
-        break;
-      case "SPACE_BETWEEN":
-        alignContent = "space-between";
-        break;
-      case "MAX":
-        alignContent = "flex-end";
-        break;
-      case "MIN":
-        alignContent = "flex-start";
-        break;
-      case "STRETCH":
-        alignContent = "stretch";
-        break;
-      case "AUTO":
-        alignContent = "normal";
-        break;
-      default:
-        alignContent = "normal";
-    }
-  }
+  const alignContentMap: Record<string, string> = {
+    CENTER: "center",
+    SPACE_BETWEEN: "space-between",
+    MAX: "flex-end",
+    MIN: "flex-start",
+    STRETCH: "stretch",
+    AUTO: "normal",
+  };
+  const alignContent =
+    alignContentMap[(node as any).counterAxisAlignContent] || "normal";
 
   // Gap and padding
   const gapValue = typeof node.itemSpacing === "number" ? node.itemSpacing : 0;
@@ -381,7 +348,9 @@ function convertFrameFlex(
     node.primaryAxisAlignItems === "SPACE_BETWEEN" ? "" : ` gap:${gapValue}px;`;
   const alignContentCss =
     wrap === "nowrap" ? "" : ` align-content:${alignContent};`;
-  const css = `display:flex;${flexFlow} flex-direction:${direction}; flex-wrap:${wrap}; justify-content:${justify}; align-items:${align};${alignContentCss}${gapCss} padding:${pT}px ${pR}px ${pB}px ${pL}px; width:${node.width}px; height:${node.height}px;${containerPos}`;
+  // Omit flex-wrap when flex-flow already includes it
+  const wrapCss = wrap === "nowrap" || flexFlow ? "" : ` flex-wrap:${wrap};`;
+  const css = `display:flex;${flexFlow} flex-direction:${direction};${wrapCss} justify-content:${justify}; align-items:${align};${alignContentCss}${gapCss} padding:${pT}px ${pR}px ${pB}px ${pL}px; width:${node.width}px; height:${node.height}px;${containerPos}`;
 
   let childrenHtml = "";
   for (const child of node.children) {
