@@ -420,7 +420,13 @@ function buildTailwindClasses(
   // Rotation
   if ("rotation" in node && node.rotation !== 0) {
     const rotationDeg = -node.rotation;
-    classes.push(`rotate-[${rotationDeg}deg]`);
+    // Tailwind arbitrary rotate needs transform + origin
+    classes.push(
+      "transform",
+      "origin-left",
+      "origin-top",
+      `rotate-[${rotationDeg}deg]`
+    );
   }
 
   // Border radius
@@ -627,6 +633,34 @@ function convertFrameFlexTailwind(
   };
   const align = alignMap[node.counterAxisAlignItems] || "items-stretch";
   classes.push(align);
+
+  // Align content (only when wrapping)
+  const alignContentValueMap: Record<string, string> = {
+    CENTER: "center",
+    SPACE_BETWEEN: "space-between",
+    MAX: "flex-end",
+    MIN: "flex-start",
+    STRETCH: "stretch",
+    AUTO: "normal",
+  };
+  const counterAxisAlignContentValue = (node as any).counterAxisAlignContent;
+  const alignContentValue =
+    alignContentValueMap[counterAxisAlignContentValue] || "normal";
+  if (wrap !== "flex-nowrap") {
+    const alignContentClassMap: Record<string, string> = {
+      center: "content-center",
+      "space-between": "content-between",
+      "flex-end": "content-end",
+      "flex-start": "content-start",
+      stretch: "content-stretch",
+    };
+    const alignContentClass = alignContentClassMap[alignContentValue];
+    if (alignContentClass) {
+      classes.push(alignContentClass);
+    } else {
+      classes.push(`[align-content:${alignContentValue}]`);
+    }
+  }
 
   // Gap
   const gapValue = node.itemSpacing ?? 0;
