@@ -5,72 +5,167 @@
     <title>Node Properties Viewer</title>
 
     <style>
+      :root {
+        --bg: #0f0f11;
+        --panel: #141416;
+        --card: #1c1c1f;
+        --border: #2b2b2f;
+        --text: #f1f1f3;
+        --muted: #a3a3aa;
+        --accent: #dcdcdf;
+        --accent-strong: #ffffff;
+        --shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+        --radius: 12px;
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        --sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
-        font-family: system-ui, sans-serif;
+        font-family: var(--sans);
         margin: 0;
-        padding: 12px;
-        font-size: 12px;
-        background: #ffffff;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #111113 0%, #0b0b0d 100%);
+        color: var(--text);
+        padding: 22px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+      }
+
+      .shell {
+        width: min(800px, 100%);
+        background: var(--panel);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
+        border-radius: var(--radius);
+        padding: 18px 18px 16px;
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 14px;
       }
 
       h3 {
-        margin-top: 0;
-        font-size: 13px;
+        margin: 0;
+        font-size: 14px;
+        letter-spacing: 0.2px;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: var(--accent-strong);
+        box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.08);
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+      }
+
+      .card-title {
+        margin: 0 0 8px;
+        font-size: 12px;
+        color: var(--muted);
+        letter-spacing: 0.3px;
       }
 
       #node-json {
         margin-top: 8px;
-        max-height: 260px;
+        max-height: 340px;
         overflow: auto;
-        background: #f5f5f5;
-        border-radius: 4px;
-        padding: 8px;
-        font-family: monospace;
-        font-size: 11px;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 9px;
+        padding: 13px;
+        font-family: var(--mono);
+        font-size: 11.5px;
         white-space: pre;
+        color: var(--accent-strong);
+        line-height: 1.55;
+        border: 1px solid var(--border);
       }
 
       .no-selection {
-        color: #777;
+        color: var(--muted);
         font-style: italic;
+      }
+
+      .row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
       }
     </style>
   </head>
 
   <body>
-    <h3>Selected Node Properties</h3>
+    <div class="shell">
+      <div class="header">
+        <h3>Selected Node</h3>
+      </div>
 
-    <p class="no-selection" id="selection-status">No selection yet.</p>
+      <div class="status" id="selection-status">
+        <span class="dot"></span>
+        <span>No selection yet.</span>
+      </div>
 
-    <pre id="node-json"></pre>
+      <div class="card" style="margin-top: 12px">
+        <p class="card-title">Properties (JSON)</p>
+        <pre id="node-json"></pre>
+      </div>
+    </div>
 
     <script>
+      const statusEl = document.getElementById("selection-status");
+      const jsonEl = document.getElementById("node-json");
+
+      function setStatus(text, selected) {
+        statusEl.querySelector("span:nth-child(2)").textContent = text;
+        statusEl.classList.toggle("no-selection", !selected);
+        statusEl.querySelector(".dot").style.opacity = selected ? "1" : "0.35";
+      }
+
+      function setJson(data) {
+        jsonEl.textContent = data ? JSON.stringify(data, null, 2) : "";
+      }
+
       window.onmessage = (event) => {
         const msg = event.data.pluginMessage;
         if (!msg) return;
 
         if (msg.type === "selection-update") {
-          document.getElementById(
-            "selection-status"
-          ).textContent = `Selected: ${msg.data.name} (${msg.data.type})`;
-          document
-            .getElementById("selection-status")
-            .classList.remove("no-selection");
-
-          document.getElementById("node-json").textContent = JSON.stringify(
-            msg.data,
-            null,
-            2
-          );
+          setStatus(`Selected: ${msg.data.name} (${msg.data.type})`, true);
+          setJson(msg.data);
+          return;
         }
 
         if (msg.type === "no-selection") {
-          document.getElementById("selection-status").textContent =
-            "No node selected.";
-          document
-            .getElementById("selection-status")
-            .classList.add("no-selection");
-          document.getElementById("node-json").textContent = "";
+          setStatus("No node selected.", false);
+          setJson(null);
         }
       };
     </script>
