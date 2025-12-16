@@ -1,5 +1,7 @@
 // ======================================================
-// SHOW UI ONLY IN PLUGIN MODE
+// PLUGIN UI - Shown only in Figma editor (not in dev mode)
+// Displays selected node properties in the plugin panel
+// Updates whenever user changes selection
 // ======================================================
 if (figma.editorType === "figma") {
   figma.showUI(__uiFiles__.main, { width: 320, height: 400 });
@@ -16,14 +18,18 @@ if (figma.editorType === "figma") {
 }
 
 // ======================================================
-// INDENT HELPER
+// FORMATTING HELPERS - Used for code generation
+// indent: Creates HTML indentation based on nesting level
 // ======================================================
 function indent(level: number): string {
   return "  ".repeat(level);
 }
 
 // ======================================================
-// COLOR & BORDER HELPERS
+// COLOR & STROKE HELPERS - Converts Figma colors to CSS
+// rgbToHex: Converts RGB values (0-1 range) to hex color codes
+// getFillColor: Extracts fill color from node
+// getStroke: Extracts stroke color and width from node
 // ======================================================
 function rgbToHex(color: RGB): string {
   const red = Math.round(color.r * 255);
@@ -56,22 +62,20 @@ function getStroke(node: SceneNode): { color: string; width: number } | null {
 }
 
 // ======================================================
-// BUILD CSS FOR NODE
+// CSS BUILDER - Generates inline CSS for any node
+// Includes dimensions, positioning, fill, stroke, rotation, and border radius
+// Non-flex nodes get position:absolute for margin-based layout
 // ======================================================
 function buildCSS(
   node: SceneNode,
   parent?: SceneNode,
-  inFlex: boolean = false,
-  isChildOfRoot: boolean = false,
-  isRoot: boolean = false
+  inFlex: boolean = false
 ): string {
   let css = `width:${node.width}px; height:${node.height}px;`;
 
-  // Absolute positioning for non-flex. If a parent is provided,
-  // use coordinates relative to the parent for nested elements.
+  // Absolute positioning for non-flex layouts (margins control spacing)
   if (!inFlex && "x" in node && "y" in node) {
-    // Use margin-based layout: only set position, do not emit left/top
-    css += isRoot ? ` position:absolute;` : ` position:absolute;`;
+    css += ` position:absolute;`;
   }
 
   const fill = getFillColor(node);
@@ -92,7 +96,9 @@ function buildCSS(
 }
 
 // ======================================================
-// MARGIN HELPERS (absolute layouts)
+// MARGIN CALCULATION HELPERS - Computes spacing from node to parent
+// Used for absolute layouts to position elements via margins
+// Returns zero margins for auto-layout parents (spacing handled by flex gap/padding)
 // ======================================================
 function computeMargins(node: SceneNode, parent: SceneNode) {
   // For auto-layout parents, spacing is modeled via padding and gap.
@@ -123,45 +129,27 @@ function computeMarginsNotFrame(node: SceneNode, parent: SceneNode) {
 }
 
 // ======================================================
-// NODE TO HTML CONVERTER
+// MAIN NODE CONVERTER - Routes nodes to appropriate converter
+// Handles text nodes, flex containers, and absolute containers
 // ======================================================
-function getTag(node: SceneNode): string {
-  return node.type === "TEXT" ? "p" : "div";
-}
-
 function convertNode(
   node: SceneNode,
   level: number = 0,
   parent?: SceneNode,
-  inFlex: boolean = false,
-  isChildOfRoot: boolean = false,
-  isRoot: boolean = false
+  inFlex: boolean = false
 ): string {
-  const tag = getTag(node);
+  const tag = node.type === "TEXT" ? "p" : "div";
 
   // Text node
   if (node.type === "TEXT") {
-    return convertTextNode(
-      node as TextNode,
-      tag,
-      level,
-      parent,
-      inFlex,
-      isChildOfRoot
-    );
+    return convertTextNode(node as TextNode, tag, level, parent, inFlex);
   }
 
   // Children nodes
   if ("children" in node && node.children.length > 0) {
     if (node.type === "FRAME" && (node as FrameNode).layoutMode !== "NONE") {
       // Flex container for auto-layout
-      return convertFrameFlex(
-        node as FrameNode,
-        tag,
-        level,
-        parent,
-        isChildOfRoot
-      );
+      return convertFrameFlex(node as FrameNode, tag, level, parent);
     } else {
       // Absolute or grouped container
       return convertFrameAbsolute(
@@ -169,26 +157,26 @@ function convertNode(
         tag,
         level,
         parent,
-        inFlex,
-        isChildOfRoot
+        inFlex
       );
     }
   }
 
-  const css = buildCSS(node, parent, inFlex, isChildOfRoot, isRoot);
+  const css = buildCSS(node, parent, inFlex);
   return `${indent(level)}<${tag} style="${css}"></${tag}>\n`;
 }
 
 // ======================================================
-// TEXT NODE CONVERTER
+// TEXT NODE CONVERTER - Generates HTML for text elements
+// Maps Figma text properties to HTML paragraph tags with inline CSS
+// Handles font size, font family, text color, and alignment
 // ======================================================
 function convertTextNode(
   node: TextNode,
   tag: string,
   level: number,
   parent?: SceneNode,
-  inFlex: boolean = false,
-  isChildOfRoot: boolean = false
+  inFlex: boolean = false
 ): string {
   let css = `width:${node.width}px; height:${node.height}px;`;
   if (!inFlex) {
@@ -203,49 +191,36 @@ function convertTextNode(
   if (node.fontName !== figma.mixed)
     css += ` font-family:'${(node.fontName as FontName).family}';`;
 
-  switch (node.textAlignHorizontal) {
-    case "CENTER":
-      css += " text-align:center;";
-      break;
-    case "RIGHT":
-      css += " text-align:right;";
-      break;
-    default:
-      css += " text-align:left;";
-  }
+  const alignmentMap: Record<string, string> = {
+    CENTER: "center",
+    RIGHT: "right",
+    LEFT: "left",
+  };
+  const textAlignment = alignmentMap[node.textAlignHorizontal] || "left";
+  css += ` text-align:${textAlignment};`;
 
   return `${indent(level)}<${tag} style="${css}">${node.characters}</${tag}>\n`;
 }
 
 // ======================================================
-// ABSOLUTE / NON-FLEX FRAME CONVERTER
+// ABSOLUTE LAYOUT CONVERTER - Handles positioned containers
+// Calculates margins for children and injects them into styles
+// Used for frames without auto-layout and grouped containers
 // ======================================================
 function convertFrameAbsolute(
   node: FrameNode,
   tag: string,
   level: number,
   parent?: SceneNode,
-  inFlex: boolean = false,
-  isChildOfRoot: boolean = false,
-  isRoot: boolean = false
+  inFlex: boolean = false
 ): string {
-  const css = buildCSS(node, parent, inFlex, isChildOfRoot, isRoot);
+  const css = buildCSS(node, parent, inFlex);
   let childrenHtml = "";
   for (const child of node.children) {
-    // If this node is the root of the conversion (no parent passed to it),
-    // then its direct children are children of root.
-    const childIsChildOfRoot = parent == null;
     // Compute margins relative to this absolute container
     const margins = computeMargins(child, node);
     // Generate child HTML first
-    let childHtml = convertNode(
-      child,
-      level + 1,
-      node,
-      inFlex,
-      childIsChildOfRoot,
-      false
-    );
+    let childHtml = convertNode(child, level + 1, node, inFlex);
     // Inject margin into the child's style attribute for absolute layouts
     const marginInjection = `margin:${margins.top}px ${margins.right}px ${margins.bottom}px ${margins.left}px; `;
     const styleIndex = childHtml.indexOf('style="');
@@ -265,36 +240,29 @@ function convertFrameAbsolute(
 }
 
 // ======================================================
-// FLEX / AUTO-LAYOUT FRAME CONVERTER
+// FLEX LAYOUT CONVERTER - Handles auto-layout containers
+// Maps Figma flex properties (direction, wrap, alignment) to CSS flexbox
+// Processes padding, gap, and alignment for flex children
 // ======================================================
 function convertFrameFlex(
   node: FrameNode,
   tag: string,
   level: number,
-  parent?: SceneNode,
-  isChildOfRoot: boolean = false,
-  isRoot: boolean = false
+  parent?: SceneNode
 ): string {
+  // Map flex direction from Figma layoutMode
   const baseDirection = node.layoutMode === "HORIZONTAL" ? "row" : "column";
   const reversed =
     (node as any).primaryAxisDirection === "REVERSE" ||
     (node as any).layoutReverse === true;
   const direction = reversed ? `${baseDirection}-reverse` : baseDirection;
 
-  // Wrap mapping from Figma's layoutWrap property
-  let wrap = "nowrap";
-  if ("layoutWrap" in node) {
-    const figmaWrap = node.layoutWrap;
-    if (figmaWrap === "WRAP") {
-      wrap = "wrap";
-    } else if (figmaWrap === "NO_WRAP") {
-      wrap = "nowrap";
-    }
-    // Note: Figma doesn't have WRAP_REVERSE, but keeping for completeness
-    if ((node as any).layoutWrap === "WRAP_REVERSE") {
-      wrap = "wrap-reverse";
-    }
-  }
+  // Map wrap from Figma layoutWrap property
+  const wrapMap: Record<string, string> = {
+    WRAP: "wrap",
+    NO_WRAP: "nowrap",
+  };
+  const wrap = wrapMap[node.layoutWrap] || "nowrap";
 
   // Flex-flow combines direction and wrap
   const flexFlow = wrap !== "nowrap" ? ` flex-flow:${wrap};` : "";
@@ -327,26 +295,12 @@ function convertFrameFlex(
   const alignContent =
     alignContentMap[counterAxisAlignContentValue] || "normal";
 
-  // Gap and padding
-  const gapValue = typeof node.itemSpacing === "number" ? node.itemSpacing : 0;
-  const paddingLeft =
-    typeof node.paddingLeft === "number" ? node.paddingLeft : 0;
-  const paddingRight =
-    typeof node.paddingRight === "number" ? node.paddingRight : 0;
-  const paddingTop = typeof node.paddingTop === "number" ? node.paddingTop : 0;
-  const paddingBottom =
-    typeof node.paddingBottom === "number" ? node.paddingBottom : 0;
-
-  // Positioning of the flex container itself: use root-aware rules
-  let containerPos = "";
-  if ("x" in node && "y" in node) {
-    if (isRoot) {
-      containerPos = ` position:relative;`;
-    } else {
-      // Margin-based layout for flex containers: no left/top
-      containerPos = ` position:relative;`;
-    }
-  }
+  // Extract gap and padding values (default to 0 if not set)
+  const gapValue = node.itemSpacing ?? 0;
+  const paddingLeft = node.paddingLeft ?? 0;
+  const paddingRight = node.paddingRight ?? 0;
+  const paddingTop = node.paddingTop ?? 0;
+  const paddingBottom = node.paddingBottom ?? 0;
 
   const gapCss =
     node.primaryAxisAlignItems === "SPACE_BETWEEN" ? "" : ` gap:${gapValue}px;`;
@@ -354,19 +308,11 @@ function convertFrameFlex(
     wrap === "nowrap" ? "" : ` align-content:${alignContent};`;
   // Omit flex-wrap when flex-flow already includes it
   const wrapCss = wrap === "nowrap" || flexFlow ? "" : ` flex-wrap:${wrap};`;
-  const css = `display:flex;${flexFlow} flex-direction:${direction};${wrapCss} justify-content:${justify}; align-items:${align};${alignContentCss}${gapCss} padding:${paddingTop}px ${paddingRight}px ${paddingBottom}px ${paddingLeft}px; width:${node.width}px; height:${node.height}px;${containerPos}`;
+  const css = `display:flex;${flexFlow} flex-direction:${direction};${wrapCss} justify-content:${justify}; align-items:${align};${alignContentCss}${gapCss} padding:${paddingTop}px ${paddingRight}px ${paddingBottom}px ${paddingLeft}px; width:${node.width}px; height:${node.height}px; position:relative;`;
 
   let childrenHtml = "";
   for (const child of node.children) {
-    const childIsChildOfRoot = parent == null;
-    childrenHtml += convertNode(
-      child,
-      level + 1,
-      node,
-      true,
-      childIsChildOfRoot,
-      false
-    );
+    childrenHtml += convertNode(child, level + 1, node, true);
   }
 
   return `${indent(level)}<${tag} style="${css}">\n${childrenHtml}${indent(
@@ -417,33 +363,29 @@ function extractNodeProperties(node: SceneNode): any {
     out.children = node.children.map((child) => extractNodeProperties(child));
   }
 
-  // Auto-layout / Flex properties
+  // Auto-layout / Flex properties (only if frame uses auto-layout)
   if (node.type === "FRAME") {
     const frame = node as FrameNode;
-    if ("layoutMode" in frame) out.layoutMode = frame.layoutMode;
-    if ("layoutWrap" in frame) out.layoutWrap = frame.layoutWrap;
-    if ("primaryAxisAlignItems" in frame)
-      out.primaryAxisAlignItems = frame.primaryAxisAlignItems;
-    if ("counterAxisAlignItems" in frame)
-      out.counterAxisAlignItems = frame.counterAxisAlignItems;
-    if ("counterAxisAlignContent" in frame)
-      out.counterAxisAlignContent = (frame as any).counterAxisAlignContent;
-    if ("primaryAxisSizingMode" in frame)
-      out.primaryAxisSizingMode = frame.primaryAxisSizingMode;
-    if ("counterAxisSizingMode" in frame)
-      out.counterAxisSizingMode = (frame as any).counterAxisSizingMode;
-    if ("itemSpacing" in frame) out.itemSpacing = frame.itemSpacing;
-    if ("paddingLeft" in frame) out.paddingLeft = frame.paddingLeft;
-    if ("paddingRight" in frame) out.paddingRight = frame.paddingRight;
-    if ("paddingTop" in frame) out.paddingTop = frame.paddingTop;
-    if ("paddingBottom" in frame) out.paddingBottom = frame.paddingBottom;
+    if ("layoutMode" in frame) {
+      out.layoutMode = frame.layoutMode;
+      // Only include layout properties if using auto-layout (not NONE)
+      if (frame.layoutMode !== "NONE") {
+        if ("layoutWrap" in frame) out.layoutWrap = frame.layoutWrap;
+        if ("itemSpacing" in frame) out.itemSpacing = frame.itemSpacing;
+        if ("paddingLeft" in frame) out.paddingLeft = frame.paddingLeft;
+        if ("paddingRight" in frame) out.paddingRight = frame.paddingRight;
+        if ("paddingTop" in frame) out.paddingTop = frame.paddingTop;
+        if ("paddingBottom" in frame) out.paddingBottom = frame.paddingBottom;
+      }
+    }
   }
 
   return out;
 }
 
 // ======================================================
-// CODEGEN MODE
+// CODEGEN MODE - Generates HTML when in development codegen mode
+// Returns formatted HTML code for selected Figma node
 // ======================================================
 if (figma.editorType === "dev" && figma.mode === "codegen") {
   figma.codegen.on("generate", ({ node, language }) => {
@@ -456,7 +398,7 @@ if (figma.editorType === "dev" && figma.mode === "codegen") {
       {
         title: "HTML",
         language: "HTML",
-        code: convertNode(node, 0, undefined, false, false, true),
+        code: convertNode(node),
       },
     ];
   });
