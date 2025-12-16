@@ -1,7 +1,7 @@
 // ======================================================
-// PLUGIN UI - Shown only in Figma editor (not in dev mode)
-// Displays selected node properties in the plugin panel
-// Updates whenever user changes selection
+// PLUGIN UI - Shows the plugin window in Figma
+// Displays info about the selected element
+// Updates every time you select something new
 // ======================================================
 if (figma.editorType === "figma") {
   figma.showUI(__uiFiles__.main, { width: 320, height: 400 });
@@ -18,18 +18,18 @@ if (figma.editorType === "figma") {
 }
 
 // ======================================================
-// FORMATTING HELPERS - Used for code generation
-// indent: Creates HTML indentation based on nesting level
+// FORMATTING HELPERS - Makes the generated HTML code look nice
+// indent: Adds spaces to indent nested HTML tags
 // ======================================================
 function indent(level: number): string {
   return "  ".repeat(level);
 }
 
 // ======================================================
-// COLOR & STROKE HELPERS - Converts Figma colors to CSS
-// rgbToHex: Converts RGB values (0-1 range) to hex color codes
-// getFillColor: Extracts fill color from node
-// getStroke: Extracts stroke color and width from node
+// COLOR HELPERS - Turns Figma colors into CSS colors
+// rgbToHex: Changes RGB numbers into hex codes like #ff0000
+// getFillColor: Gets the background color from an element
+// getStroke: Gets the border color and thickness
 // ======================================================
 function rgbToHex(color: RGB): string {
   const red = Math.round(color.r * 255);
@@ -62,9 +62,9 @@ function getStroke(node: SceneNode): { color: string; width: number } | null {
 }
 
 // ======================================================
-// CSS BUILDER - Generates inline CSS for any node
-// Includes dimensions, positioning, fill, stroke, rotation, and border radius
-// Non-flex nodes get position:absolute for margin-based layout
+// CSS BUILDER - Creates CSS styles for any element
+// Sets size, position, colors, borders, rotation, and rounded corners
+// Elements not in flexbox get absolute positioning
 // ======================================================
 function buildCSS(
   node: SceneNode,
@@ -96,9 +96,9 @@ function buildCSS(
 }
 
 // ======================================================
-// MARGIN CALCULATION HELPERS - Computes spacing from node to parent
-// Used for absolute layouts to position elements via margins
-// Returns zero margins for auto-layout parents (spacing handled by flex gap/padding)
+// MARGIN HELPERS - Figures out spacing between elements and their containers
+// Used to position elements with margins instead of left/top values
+// Returns 0 for flex layouts (they use gap and padding instead)
 // ======================================================
 function computeMargins(node: SceneNode, parent: SceneNode) {
   // For auto-layout parents, spacing is modeled via padding and gap.
@@ -129,8 +129,8 @@ function computeMarginsNotFrame(node: SceneNode, parent: SceneNode) {
 }
 
 // ======================================================
-// MAIN NODE CONVERTER - Routes nodes to appropriate converter
-// Handles text nodes, flex containers, and absolute containers
+// MAIN CONVERTER - Decides which converter to use for each element
+// Sends text to text converter, flex boxes to flex converter, etc.
 // ======================================================
 function convertNode(
   node: SceneNode,
@@ -167,9 +167,8 @@ function convertNode(
 }
 
 // ======================================================
-// TEXT NODE CONVERTER - Generates HTML for text elements
-// Maps Figma text properties to HTML paragraph tags with inline CSS
-// Handles font size, font family, text color, and alignment
+// TEXT CONVERTER - Turns Figma text into HTML paragraph tags
+// Converts text properties like size, color, font, and alignment to CSS
 // ======================================================
 function convertTextNode(
   node: TextNode,
@@ -203,9 +202,9 @@ function convertTextNode(
 }
 
 // ======================================================
-// ABSOLUTE LAYOUT CONVERTER - Handles positioned containers
-// Calculates margins for children and injects them into styles
-// Used for frames without auto-layout and grouped containers
+// ABSOLUTE LAYOUT CONVERTER - Handles containers with positioned elements
+// Calculates and adds margins to position child elements
+// Used for regular frames and groups (not auto-layout)
 // ======================================================
 function convertFrameAbsolute(
   node: FrameNode,
@@ -241,8 +240,8 @@ function convertFrameAbsolute(
 
 // ======================================================
 // FLEX LAYOUT CONVERTER - Handles auto-layout containers
-// Maps Figma flex properties (direction, wrap, alignment) to CSS flexbox
-// Processes padding, gap, and alignment for flex children
+// Turns Figma auto-layout settings into CSS flexbox code
+// Sets direction, wrapping, spacing, padding, and alignment
 // ======================================================
 function convertFrameFlex(
   node: FrameNode,
@@ -264,8 +263,8 @@ function convertFrameFlex(
   };
   const wrap = wrapMap[node.layoutWrap] || "nowrap";
 
-  // Flex-flow combines direction and wrap
-  const flexFlow = wrap !== "nowrap" ? ` flex-flow:${wrap};` : "";
+  // Flex-wrap (omit when nowrap)
+  const wrapCss = wrap === "nowrap" ? "" : ` flex-wrap:${wrap};`;
 
   // Map Figma alignment properties to CSS values
   const justifyMap: Record<string, string> = {
@@ -306,9 +305,7 @@ function convertFrameFlex(
     node.primaryAxisAlignItems === "SPACE_BETWEEN" ? "" : ` gap:${gapValue}px;`;
   const alignContentCss =
     wrap === "nowrap" ? "" : ` align-content:${alignContent};`;
-  // Omit flex-wrap when flex-flow already includes it
-  const wrapCss = wrap === "nowrap" || flexFlow ? "" : ` flex-wrap:${wrap};`;
-  const css = `display:flex;${flexFlow} flex-direction:${direction};${wrapCss} justify-content:${justify}; align-items:${align};${alignContentCss}${gapCss} padding:${paddingTop}px ${paddingRight}px ${paddingBottom}px ${paddingLeft}px; width:${node.width}px; height:${node.height}px; position:relative;`;
+  const css = `display:flex; flex-direction:${direction};${wrapCss} justify-content:${justify}; align-items:${align};${alignContentCss}${gapCss} padding:${paddingTop}px ${paddingRight}px ${paddingBottom}px ${paddingLeft}px; width:${node.width}px; height:${node.height}px; position:relative;`;
 
   let childrenHtml = "";
   for (const child of node.children) {
@@ -321,7 +318,9 @@ function convertFrameFlex(
 }
 
 // ======================================================
-// EXTRACT NODE PROPERTIES
+// PROPERTY EXTRACTOR - Grabs all info from selected Figma elements
+// Shows this info in the plugin panel
+// Goes through all child elements and collects their properties too
 // ======================================================
 function extractNodeProperties(node: SceneNode): any {
   const out: any = { id: node.id, name: node.name, type: node.type };
@@ -384,8 +383,286 @@ function extractNodeProperties(node: SceneNode): any {
 }
 
 // ======================================================
-// CODEGEN MODE - Generates HTML when in development codegen mode
-// Returns formatted HTML code for selected Figma node
+// TAILWIND CLASS BUILDER - Creates Tailwind classes for any element
+// Converts sizes, colors, borders, and rotation into Tailwind format
+// Uses brackets [value] for exact pixel values
+// ======================================================
+function buildTailwindClasses(
+  node: SceneNode,
+  parent?: SceneNode,
+  inFlex: boolean = false
+): string {
+  let classes: string[] = [];
+
+  // Dimensions
+  classes.push(`w-[${node.width}px]`);
+  classes.push(`h-[${node.height}px]`);
+
+  // Positioning
+  if (!inFlex && "x" in node && "y" in node) {
+    classes.push("absolute");
+  }
+
+  // Fill color
+  const fill = getFillColor(node);
+  if (fill) {
+    classes.push(`bg-[${fill}]`);
+  }
+
+  // Stroke
+  const stroke = getStroke(node);
+  if (stroke) {
+    classes.push(`border`);
+    classes.push(`border-[${stroke.width}px]`);
+    classes.push(`border-[${stroke.color}]`);
+  }
+
+  // Rotation
+  if ("rotation" in node && node.rotation !== 0) {
+    const rotationDeg = -node.rotation;
+    classes.push(`rotate-[${rotationDeg}deg]`);
+  }
+
+  // Border radius
+  if ("cornerRadius" in node && typeof node.cornerRadius === "number") {
+    classes.push(`rounded-[${node.cornerRadius}px]`);
+  }
+
+  return classes.join(" ");
+}
+
+// ======================================================
+// TAILWIND CONVERTER - Decides which Tailwind converter to use
+// Sends text to text converter, flex boxes to flex converter, etc.
+// Main starting point for creating Tailwind HTML
+// ======================================================
+function convertNodeTailwind(
+  node: SceneNode,
+  level: number = 0,
+  parent?: SceneNode,
+  inFlex: boolean = false
+): string {
+  const tag = node.type === "TEXT" ? "p" : "div";
+
+  // Text node
+  if (node.type === "TEXT") {
+    return convertTextNodeTailwind(
+      node as TextNode,
+      tag,
+      level,
+      parent,
+      inFlex
+    );
+  }
+
+  // Children nodes
+  if ("children" in node && node.children.length > 0) {
+    if (node.type === "FRAME" && (node as FrameNode).layoutMode !== "NONE") {
+      // Flex container for auto-layout
+      return convertFrameFlexTailwind(node as FrameNode, tag, level, parent);
+    } else {
+      // Absolute or grouped container
+      return convertFrameAbsoluteTailwind(
+        node as FrameNode,
+        tag,
+        level,
+        parent,
+        inFlex
+      );
+    }
+  }
+
+  const classes = buildTailwindClasses(node, parent, inFlex);
+  return `${indent(level)}<${tag} class="${classes}"></${tag}>\n`;
+}
+
+// ======================================================
+// TAILWIND TEXT CONVERTER - Turns Figma text into HTML with Tailwind classes
+// Converts size, color, font, and alignment to Tailwind classes
+// Uses simple font names like font-sans, font-serif when possible
+// ======================================================
+function convertTextNodeTailwind(
+  node: TextNode,
+  tag: string,
+  level: number,
+  parent?: SceneNode,
+  inFlex: boolean = false
+): string {
+  let classes: string[] = [];
+
+  // Dimensions
+  classes.push(`w-[${node.width}px]`);
+  classes.push(`h-[${node.height}px]`);
+
+  // Positioning
+  if (!inFlex) {
+    classes.push("absolute");
+  }
+
+  // Text color
+  const fill = getFillColor(node);
+  if (fill) {
+    classes.push(`text-[${fill}]`);
+  }
+
+  // Font size
+  if (typeof node.fontSize === "number") {
+    classes.push(`text-[${node.fontSize}px]`);
+  }
+
+  // Font family
+  if (node.fontName !== figma.mixed) {
+    const fontFamily = (node.fontName as FontName).family;
+    // Map common font families to Tailwind
+    const fontMap: Record<string, string> = {
+      Inter: "font-sans",
+      Arial: "font-sans",
+      "Times New Roman": "font-serif",
+      Georgia: "font-serif",
+      Courier: "font-mono",
+      Consolas: "font-mono",
+    };
+    if (fontMap[fontFamily]) {
+      classes.push(fontMap[fontFamily]);
+    }
+  }
+
+  // Text alignment
+  const alignmentMap: Record<string, string> = {
+    CENTER: "text-center",
+    RIGHT: "text-right",
+    LEFT: "text-left",
+  };
+  const textAlignment = alignmentMap[node.textAlignHorizontal] || "text-left";
+  classes.push(textAlignment);
+
+  return `${indent(level)}<${tag} class="${classes.join(" ")}">${
+    node.characters
+  }</${tag}>\n`;
+}
+
+// ======================================================
+// TAILWIND ABSOLUTE CONVERTER - Handles positioned elements with Tailwind
+// Calculates and adds margin classes to position child elements
+// Used for regular frames and groups (not auto-layout)
+// ======================================================
+function convertFrameAbsoluteTailwind(
+  node: FrameNode,
+  tag: string,
+  level: number,
+  parent?: SceneNode,
+  inFlex: boolean = false
+): string {
+  const classes = buildTailwindClasses(node, parent, inFlex);
+  let childrenHtml = "";
+  for (const child of node.children) {
+    const margins = computeMargins(child, node);
+    let childHtml = convertNodeTailwind(child, level + 1, node, inFlex);
+    // Inject margin Tailwind classes
+    const marginClasses = `mt-[${margins.top}px] mr-[${margins.right}px] mb-[${margins.bottom}px] ml-[${margins.left}px]`;
+    const classIndex = childHtml.indexOf('class="');
+    if (classIndex !== -1) {
+      const beforeClass = childHtml.slice(0, classIndex + 7); // include class="
+      const afterClass = childHtml.slice(classIndex + 7);
+      childHtml = beforeClass + marginClasses + " " + afterClass;
+    }
+    childrenHtml += childHtml;
+  }
+  return `${indent(level)}<${tag} class="${classes}">\n${childrenHtml}${indent(
+    level
+  )}</${tag}>\n`;
+}
+
+// ======================================================
+// TAILWIND FLEX CONVERTER - Handles auto-layout with Tailwind classes
+// Turns Figma auto-layout into Tailwind flex classes
+// Sets direction, wrapping, spacing, padding, and alignment
+// ======================================================
+function convertFrameFlexTailwind(
+  node: FrameNode,
+  tag: string,
+  level: number,
+  parent?: SceneNode
+): string {
+  let classes: string[] = [];
+  classes.push("flex");
+
+  // Flex direction
+  const isRow = node.layoutMode === "HORIZONTAL";
+  const reversed =
+    (node as any).primaryAxisDirection === "REVERSE" ||
+    (node as any).layoutReverse === true;
+  const directionClass = isRow
+    ? reversed
+      ? "flex-row-reverse"
+      : "flex-row"
+    : reversed
+    ? "flex-col-reverse"
+    : "flex-col";
+  classes.push(directionClass);
+
+  // Wrap
+  const wrapMap: Record<string, string> = {
+    WRAP: "flex-wrap",
+    NO_WRAP: "flex-nowrap",
+  };
+  const wrap = wrapMap[node.layoutWrap] || "flex-nowrap";
+  classes.push(wrap);
+
+  // Justify content (primary axis)
+  const justifyMap: Record<string, string> = {
+    CENTER: "justify-center",
+    MAX: "justify-end",
+    SPACE_BETWEEN: "justify-between",
+    MIN: "justify-start",
+  };
+  const justify = justifyMap[node.primaryAxisAlignItems] || "justify-start";
+  classes.push(justify);
+
+  // Align items (cross axis)
+  const alignMap: Record<string, string> = {
+    CENTER: "items-center",
+    MAX: "items-end",
+    MIN: "items-start",
+  };
+  const align = alignMap[node.counterAxisAlignItems] || "items-stretch";
+  classes.push(align);
+
+  // Gap
+  const gapValue = node.itemSpacing ?? 0;
+  if (node.primaryAxisAlignItems !== "SPACE_BETWEEN" && gapValue > 0) {
+    classes.push(`gap-[${gapValue}px]`);
+  }
+
+  // Padding
+  const paddingLeft = node.paddingLeft ?? 0;
+  const paddingRight = node.paddingRight ?? 0;
+  const paddingTop = node.paddingTop ?? 0;
+  const paddingBottom = node.paddingBottom ?? 0;
+  if (paddingLeft > 0) classes.push(`pl-[${paddingLeft}px]`);
+  if (paddingRight > 0) classes.push(`pr-[${paddingRight}px]`);
+  if (paddingTop > 0) classes.push(`pt-[${paddingTop}px]`);
+  if (paddingBottom > 0) classes.push(`pb-[${paddingBottom}px]`);
+
+  // Dimensions
+  classes.push(`w-[${node.width}px]`);
+  classes.push(`h-[${node.height}px]`);
+  classes.push("relative");
+
+  let childrenHtml = "";
+  for (const child of node.children) {
+    childrenHtml += convertNodeTailwind(child, level + 1, node, true);
+  }
+
+  return `${indent(level)}<${tag} class="${classes.join(
+    " "
+  )}">\n${childrenHtml}${indent(level)}</${tag}>\n`;
+}
+
+// ======================================================
+// CODE GENERATOR - Creates HTML code in dev mode
+// Generates two versions: one with inline CSS, one with Tailwind classes
+// Shows up when you inspect elements in Figma dev mode
 // ======================================================
 if (figma.editorType === "dev" && figma.mode === "codegen") {
   figma.codegen.on("generate", ({ node, language }) => {
@@ -396,9 +673,14 @@ if (figma.editorType === "dev" && figma.mode === "codegen") {
 
     return [
       {
-        title: "HTML",
+        title: "HTML (Inline CSS)",
         language: "HTML",
         code: convertNode(node),
+      },
+      {
+        title: "HTML (Tailwind CSS)",
+        language: "HTML",
+        code: convertNodeTailwind(node),
       },
     ];
   });
