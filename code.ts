@@ -1,100 +1,53 @@
 // ======================================================
 // SHOW UI ONLY IN PLUGIN MODE
-// Initialize UI and post selection updates to the iframe.
 // ======================================================
 if (figma.editorType === "figma") {
   figma.showUI(__uiFiles__.main, { width: 320, height: 400 });
 
   figma.on("selectionchange", () => {
     const node = figma.currentPage.selection[0];
-
     if (!node) {
       figma.ui.postMessage({ type: "no-selection" });
       return;
     }
-
     const props = extractNodeProperties(node);
-
-    figma.ui.postMessage({
-      type: "selection-update",
-      data: props,
-    });
+    figma.ui.postMessage({ type: "selection-update", data: props });
   });
 }
 
 // ======================================================
 // INDENT HELPER
-// Return two-space indentation for the given level.
 // ======================================================
 function indent(level: number): string {
   return "  ".repeat(level);
 }
 
 // ======================================================
-// COMPUTE MARGINS HELPER
-// Compute top/left/right/bottom (px) of `node` relative to `parent`.
+// COLOR & BORDER HELPERS
 // ======================================================
-
-function computeMargins(node: SceneNode, parent: SceneNode) {
-  if (parent.type === "FRAME") {
-    return computeMarginsWithFrame(node, parent);
-  } else {
-    return computeMarginsNotFrame(node, parent);
-  }
+function rgbToHex(color: RGB): string {
+  const r = Math.round(color.r * 255);
+  const g = Math.round(color.g * 255);
+  const b = Math.round(color.b * 255);
+  return `#${r.toString(16).padStart(2, "0")}${g
+    .toString(16)
+    .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
 }
 
-function computeMarginsWithFrame(node: SceneNode, parent: SceneNode) {
-  // assume both node and parent have x/y/width/height where applicable
-  const top = node.y;
-  const left = node.x;
-  const right = parent.width - node.width - left;
-  const bottom = parent.height - node.height - top;
-  const x = { top, left, right, bottom };
-  console.log(node, parent, x);
-  return x;
-}
-
-function computeMarginsNotFrame(node: SceneNode, parent: SceneNode) {
-  // assume both node and parent have x/y/width/height where applicable
-  const top = node.y - parent.y;
-  const left = node.x - parent.x;
-  const right = parent.width - (node.x - parent.x + node.width);
-  const bottom = parent.height - (node.y - parent.y + node.height);
-  return { top, left, right, bottom };
-}
-
-// ======================================================
-// GET FILL COLOR
-// Return first solid fill as `#rrggbb` or null.
-// ======================================================
 function getFillColor(node: SceneNode): string | null {
   if ("fills" in node && Array.isArray(node.fills) && node.fills.length > 0) {
     const paint = node.fills[0];
-    if (paint.type === "SOLID") {
-      const red = Math.round(paint.color.r * 255);
-      const green = Math.round(paint.color.g * 255);
-      const blue = Math.round(paint.color.b * 255);
-      return `#${red.toString(16).padStart(2, "0")}${green
-        .toString(16)
-        .padStart(2, "0")}${blue.toString(16).padStart(2, "0")}`;
-    }
+    if (paint.type === "SOLID") return rgbToHex(paint.color);
   }
   return null;
 }
 
-// ======================================================
-// GET BORDER
-// Return first solid stroke as { color, width } or null.
-// ======================================================
 function getStroke(node: SceneNode): { color: string; width: number } | null {
-  if ("strokes" in node && node.strokes.length > 0) {
+  if ("strokes" in node && Array.isArray(node.strokes) && node.strokes.length) {
     const paint = node.strokes[0];
     if (paint.type === "SOLID") {
-      const red = Math.round(paint.color.r * 255);
-      const green = Math.round(paint.color.g * 255);
-      const blue = Math.round(paint.color.b * 255);
       return {
-        color: `#${red.toString(16)}${green.toString(16)}${blue.toString(16)}`,
+        color: rgbToHex(paint.color),
         width: (node as any).strokeWeight || 1,
       };
     }
@@ -103,314 +56,338 @@ function getStroke(node: SceneNode): { color: string; width: number } | null {
 }
 
 // ======================================================
-// RAW CSS BUILDER
-// Build inline CSS for a node (geometry, fill, stroke, rotation).
+// BUILD CSS FOR NODE
 // ======================================================
-function buildCSS(node: SceneNode, parent?: SceneNode): string {
-  let cssText = `width:${node.width}px; height:${node.height}px;`;
+function buildCSS(
+  node: SceneNode,
+  parent?: SceneNode,
+  inFlex: boolean = false,
+  isChildOfRoot: boolean = false,
+  isRoot: boolean = false
+): string {
+  let css = `width:${node.width}px; height:${node.height}px;`;
 
-  if ("x" in node && "y" in node) {
-    cssText += ` position:absolute; left:${node.x}px; top:${node.y}px;`;
+  // Absolute positioning for non-flex. If a parent is provided,
+  // use coordinates relative to the parent for nested elements.
+  if (!inFlex && "x" in node && "y" in node) {
+    if (isRoot) {
+      css += ` position:relative; left:0px; top:0px;`;
+    } else {
+      // Root children should use raw x/y; deeper descendants relative to parent
+      const useRelative = !!parent && !isChildOfRoot;
+      const left =
+        useRelative && "x" in parent ? node.x - (parent as any).x : node.x;
+      const top =
+        useRelative && "y" in parent ? node.y - (parent as any).y : node.y;
+      css += ` position:absolute; left:${left}px; top:${top}px;`;
+    }
   }
 
   const fill = getFillColor(node);
-  if (fill) cssText += ` background:${fill};`;
+  if (fill) css += ` background:${fill};`;
 
   const stroke = getStroke(node);
-  if (stroke) cssText += ` border:${stroke.width}px solid ${stroke.color};`;
+  if (stroke) css += ` border:${stroke.width}px solid ${stroke.color};`;
 
   if ("rotation" in node && node.rotation !== 0) {
-    cssText += ` transform:rotate(${-node.rotation}deg); transform-origin:left top;`;
+    css += ` transform:rotate(${-node.rotation}deg); transform-origin:left top;`;
   }
 
   if ("cornerRadius" in node && typeof node.cornerRadius === "number") {
-    cssText += ` border-radius:${node.cornerRadius}px;`;
+    css += ` border-radius:${node.cornerRadius}px;`;
   }
 
-  // Add margin relative to parent if available
-  if (parent && "x" in parent && "y" in parent) {
-    const m = computeMargins(node, parent);
-    cssText += ` margin-top:${m.top}px; margin-left:${m.left}px; margin-right:${m.right}px; margin-bottom:${m.bottom}px;`;
-  }
-
-  return cssText;
+  return css;
 }
 
 // ======================================================
-// SELECT TAG
-// Map TEXT -> `p`, others -> `div`.
+// NODE TO HTML CONVERTER
 // ======================================================
 function getTag(node: SceneNode): string {
   return node.type === "TEXT" ? "p" : "div";
 }
 
-// ======================================================
-// HTML CONVERTER
-// Emit HTML with inline CSS; simple styling only.
-// ======================================================
 function convertNode(
   node: SceneNode,
   level: number = 0,
-  parent?: SceneNode
+  parent?: SceneNode,
+  inFlex: boolean = false,
+  isChildOfRoot: boolean = false,
+  isRoot: boolean = false
 ): string {
-  const htmlTag = getTag(node);
+  const tag = getTag(node);
 
+  // Text node
   if (node.type === "TEXT") {
-    return convertTextNodeHTML(node as TextNode, htmlTag, level, parent);
-  }
-
-  if ("children" in node && node.children.length > 0) {
-    return convertFrameHTML(node as FrameNode, htmlTag, level, parent);
-  }
-
-  return `${indent(level)}<${htmlTag} style="${buildCSS(
-    node,
-    parent
-  )}"></${htmlTag}>\n`;
-}
-
-function convertTextNodeHTML(
-  node: TextNode,
-  htmlTag: string,
-  level: number,
-  parent?: SceneNode
-): string {
-  let cssText = `width:${node.width}px; height:${node.height}px; position:absolute; left:${node.x}px; top:${node.y}px;`;
-
-  const fill = getFillColor(node);
-  if (fill) cssText += ` color:${fill};`;
-
-  if (typeof node.fontSize === "number")
-    cssText += ` font-size:${node.fontSize}px;`;
-
-  if (node.fontName !== figma.mixed) {
-    const font = node.fontName as FontName;
-    cssText += ` font-family:'${font.family}';`;
-  }
-
-  switch (node.textAlignHorizontal) {
-    case "CENTER":
-      cssText += " text-align:center;";
-      break;
-    case "RIGHT":
-      cssText += " text-align:right;";
-      break;
-    default:
-      cssText += " text-align:left;";
-  }
-
-  // Add margin relative to parent
-  if (parent && "x" in parent && "y" in parent) {
-    const m = computeMargins(node as SceneNode, parent);
-    cssText += ` margin-top:${m.top}px; margin-left:${m.left}px; margin-right:${m.right}px; margin-bottom:${m.bottom}px;`;
-  }
-
-  return `${indent(level)}<${htmlTag} style="${cssText}">${
-    node.characters
-  }</${htmlTag}>\n`;
-}
-
-function convertFrameHTML(
-  node: FrameNode,
-  htmlTag: string,
-  level: number,
-  parent?: SceneNode
-): string {
-  let cssText = `position:absolute; width:${node.width}px; height:${node.height}px; left:${node.x}px; top:${node.y}px;`;
-
-  const fill = getFillColor(node);
-  if (fill) cssText += ` background:${fill};`;
-
-  const stroke = getStroke(node);
-  if (stroke) cssText += ` border:${stroke.width}px solid ${stroke.color};`;
-
-  // Add margin relative to parent
-  if (parent && "x" in parent && "y" in parent) {
-    const m = computeMargins(node as SceneNode, parent);
-    cssText += ` margin-top:${m.top}px; margin-left:${m.left}px; margin-right:${m.right}px; margin-bottom:${m.bottom}px;`;
-  }
-
-  let childrenHtml = "";
-  for (const child of node.children) {
-    childrenHtml += convertNode(child, level + 1, node);
-  }
-
-  return `${indent(
-    level
-  )}<${htmlTag} class="frame" style="${cssText}">\n${childrenHtml}${indent(
-    level
-  )}</${htmlTag}>\n`;
-}
-
-// ======================================================
-// TAILWIND CONVERTER (with margin)
-// Emit Tailwind utility classes.
-// ======================================================
-function convertNodeTailwind(
-  node: SceneNode,
-  level: number = 0,
-  parent?: SceneNode
-): string {
-  const htmlTag = getTag(node);
-
-  if (node.type === "TEXT") {
-    return convertTextNodeTailwind(node as TextNode, htmlTag, level, parent);
-  }
-
-  if ("children" in node && node.children.length > 0) {
-    return convertFrameTailwind(node as FrameNode, htmlTag, level, parent);
-  }
-
-  return convertShapeTailwind(node, htmlTag, level, parent);
-}
-
-function convertShapeTailwind(
-  node: SceneNode,
-  htmlTag: string,
-  level: number,
-  parent?: SceneNode
-): string {
-  const widthClass = `w-[${node.width}px]`;
-  const heightClass = `h-[${node.height}px]`;
-
-  const fill = getFillColor(node);
-  const stroke = getStroke(node);
-
-  const classList = [widthClass, heightClass];
-
-  if (fill) classList.push(`bg-[${fill}]`);
-
-  if ("x" in node && "y" in node) {
-    classList.push("absolute", `left-[${node.x}px]`, `top-[${node.y}px]`);
-  }
-
-  if ("cornerRadius" in node && !Number.isNaN(node.cornerRadius)) {
-    classList.push(`rounded-[${String(node.cornerRadius)}px]`);
-  }
-
-  if (stroke) {
-    classList.push(`border-[${stroke.width}px]`);
-    classList.push(`border-[${stroke.color}]`);
-  }
-
-  // Margin relative to parent
-  if (parent) {
-    const m = computeMargins(node, parent);
-    classList.push(`mt-[${m.top}px]`);
-    classList.push(`ml-[${m.left}px]`);
-    classList.push(`mr-[${m.right}px]`);
-    classList.push(`mb-[${m.bottom}px]`);
-  }
-
-  return `${indent(level)}<${htmlTag} class="${classList.join(
-    " "
-  )}"></${htmlTag}>\n`;
-}
-
-function convertTextNodeTailwind(
-  node: TextNode,
-  htmlTag: string,
-  level: number,
-  parent?: SceneNode
-) {
-  const textClasses: string[] = [];
-
-  const fill = getFillColor(node);
-  if (fill) textClasses.push(`text-[${fill}]`);
-
-  if (typeof node.fontSize === "number") {
-    textClasses.push(`text-[${node.fontSize}px]`);
-  }
-
-  if (node.fontName !== figma.mixed) {
-    const font = node.fontName as FontName;
-    textClasses.push(`font-['${font.family}']`);
-  }
-
-  switch (node.textAlignHorizontal) {
-    case "CENTER":
-      textClasses.push("text-center");
-      break;
-    case "RIGHT":
-      textClasses.push("text-right");
-      break;
-    default:
-      textClasses.push("text-left");
-  }
-
-  // Add margin classes relative to parent when available
-  if (parent) {
-    const m = computeMargins(node as SceneNode, parent);
-    textClasses.push(
-      `mt-[${m.top}px]`,
-      `ml-[${m.left}px]`,
-      `mr-[${m.right}px]`,
-      `mb-[${m.bottom}px]`
+    return convertTextNode(
+      node as TextNode,
+      tag,
+      level,
+      parent,
+      inFlex,
+      isChildOfRoot
     );
   }
 
-  return `${indent(level)}<${htmlTag} class="${textClasses.join(" ")}">${
-    node.characters
-  }</${htmlTag}>\n`;
-}
-
-function convertFrameTailwind(
-  node: FrameNode,
-  htmlTag: string,
-  level: number,
-  parent?: SceneNode
-) {
-  const classList = [`w-[${node.width}px]`, `h-[${node.height}px]`];
-
-  if ("x" in node && "y" in node) {
-    classList.push("absolute", `left-[${node.x}px]`, `top-[${node.y}px]`);
-  } else {
-    classList.push("relative");
+  // Children nodes
+  if ("children" in node && node.children.length > 0) {
+    if (node.type === "FRAME" && (node as FrameNode).layoutMode !== "NONE") {
+      // Flex container for auto-layout
+      return convertFrameFlex(
+        node as FrameNode,
+        tag,
+        level,
+        parent,
+        isChildOfRoot
+      );
+    } else {
+      // Absolute or grouped container
+      return convertFrameAbsolute(
+        node as FrameNode,
+        tag,
+        level,
+        parent,
+        inFlex,
+        isChildOfRoot
+      );
+    }
   }
 
-  const fill = getFillColor(node);
-  if (fill) classList.push(`bg-[${fill}]`);
-
-  // Margin relative to parent
-  if (parent) {
-    const m = computeMargins(node, parent);
-    classList.push(`mt-[${m.top}px]`);
-    classList.push(`ml-[${m.left}px]`);
-    classList.push(`mr-[${m.right}px]`);
-    classList.push(`mb-[${m.bottom}px]`);
-  }
-
-  let childrenHtml = "";
-  for (const child of node.children) {
-    childrenHtml += convertNodeTailwind(child, level + 1, node);
-  }
-
-  return `${indent(level)}<${htmlTag} class="${classList.join(
-    " "
-  )}">\n${childrenHtml}${indent(level)}</${htmlTag}>\n`;
+  const css = buildCSS(node, parent, inFlex, isChildOfRoot, isRoot);
+  return `${indent(level)}<${tag} style="${css}"></${tag}>\n`;
 }
 
 // ======================================================
-// PROPERTY EXTRACTOR FOR UI (with margin)
-/* eslint-disable @typescript-eslint/no-explicit-any */
-function extractNodeProperties(node: SceneNode) {
-  // Build a serializable object that mirrors the node's own property names
-  // while keeping a couple of backward-compatible keys (`fill`, `stroke`).
-  const out: any = {
-    id: node.id,
-    name: node.name,
-    type: node.type,
-  };
+// TEXT NODE CONVERTER
+// ======================================================
+function convertTextNode(
+  node: TextNode,
+  tag: string,
+  level: number,
+  parent?: SceneNode,
+  inFlex: boolean = false,
+  isChildOfRoot: boolean = false
+): string {
+  let css = `width:${node.width}px; height:${node.height}px;`;
+  if (!inFlex) {
+    const useRelative = !!parent && !isChildOfRoot;
+    const left =
+      useRelative && "x" in parent ? node.x - (parent as any).x : node.x;
+    const top =
+      useRelative && "y" in parent ? node.y - (parent as any).y : node.y;
+    css += ` position:absolute; left:${left}px; top:${top}px;`;
+  }
 
-  // Copy common geometry / transform properties if present
-  if ("width" in node) out.width = (node as any).width;
-  if ("height" in node) out.height = (node as any).height;
-  if ("x" in node) out.x = (node as any).x;
-  if ("y" in node) out.y = (node as any).y;
-  if ("rotation" in node) out.rotation = (node as any).rotation;
-  if ("cornerRadius" in node) out.cornerRadius = (node as any).cornerRadius;
+  const fill = getFillColor(node);
+  if (fill) css += ` color:${fill};`;
+  if (typeof node.fontSize === "number")
+    css += ` font-size:${node.fontSize}px;`;
+  if (node.fontName !== figma.mixed)
+    css += ` font-family:'${(node.fontName as FontName).family}';`;
 
-  // Text properties
+  switch (node.textAlignHorizontal) {
+    case "CENTER":
+      css += " text-align:center;";
+      break;
+    case "RIGHT":
+      css += " text-align:right;";
+      break;
+    default:
+      css += " text-align:left;";
+  }
+
+  return `${indent(level)}<${tag} style="${css}">${node.characters}</${tag}>\n`;
+}
+
+// ======================================================
+// ABSOLUTE / NON-FLEX FRAME CONVERTER
+// ======================================================
+function convertFrameAbsolute(
+  node: FrameNode,
+  tag: string,
+  level: number,
+  parent?: SceneNode,
+  inFlex: boolean = false,
+  isChildOfRoot: boolean = false,
+  isRoot: boolean = false
+): string {
+  const css = buildCSS(node, parent, inFlex, isChildOfRoot, isRoot);
+  let childrenHtml = "";
+  for (const child of node.children) {
+    // If this node is the root of the conversion (no parent passed to it),
+    // then its direct children are children of root.
+    const childIsChildOfRoot = parent == null;
+    childrenHtml += convertNode(
+      child,
+      level + 1,
+      node,
+      inFlex,
+      childIsChildOfRoot,
+      false
+    );
+  }
+  return `${indent(level)}<${tag} style="${css}">\n${childrenHtml}${indent(
+    level
+  )}</${tag}>\n`;
+}
+
+// ======================================================
+// FLEX / AUTO-LAYOUT FRAME CONVERTER
+// ======================================================
+function convertFrameFlex(
+  node: FrameNode,
+  tag: string,
+  level: number,
+  parent?: SceneNode,
+  isChildOfRoot: boolean = false,
+  isRoot: boolean = false
+): string {
+  const baseDirection = node.layoutMode === "HORIZONTAL" ? "row" : "column";
+  const reversed =
+    (node as any).primaryAxisDirection === "REVERSE" ||
+    (node as any).layoutReverse === true;
+  const direction = reversed ? `${baseDirection}-reverse` : baseDirection;
+
+  // Wrap mapping from Figma's layoutWrap property
+  let wrap = "nowrap";
+  if ("layoutWrap" in node) {
+    const figmaWrap = node.layoutWrap;
+    if (figmaWrap === "WRAP") {
+      wrap = "wrap";
+    } else if (figmaWrap === "NO_WRAP") {
+      wrap = "nowrap";
+    }
+    // Note: Figma doesn't have WRAP_REVERSE, but keeping for completeness
+    if ((node as any).layoutWrap === "WRAP_REVERSE") {
+      wrap = "wrap-reverse";
+    }
+  }
+
+  // Flex-flow combines direction and wrap
+  const flexFlow = wrap !== "nowrap" ? ` flex-flow:${wrap};` : "";
+
+  // Justify-content maps Figma primaryAxisAlignItems
+  let justify = "flex-start";
+  switch (node.primaryAxisAlignItems) {
+    case "CENTER":
+      justify = "center";
+      break;
+    case "MAX":
+      justify = "flex-end";
+      break;
+    case "SPACE_BETWEEN":
+      justify = "space-between";
+      break;
+    default:
+      justify = "flex-start";
+  }
+
+  // Align-items maps Figma counterAxisAlignItems
+  let align = "stretch";
+  switch (node.counterAxisAlignItems) {
+    case "CENTER":
+      align = "center";
+      break;
+    case "MAX":
+      align = "flex-end";
+      break;
+    case "MIN":
+      align = "flex-start";
+      break;
+    default:
+      align = "stretch";
+  }
+
+  // Align-content for multi-line distribution when wrapping
+  let alignContent = "normal";
+  if ("counterAxisAlignContent" in node) {
+    const cac = (node as any).counterAxisAlignContent;
+    switch (cac) {
+      case "CENTER":
+        alignContent = "center";
+        break;
+      case "SPACE_BETWEEN":
+        alignContent = "space-between";
+        break;
+      case "MAX":
+        alignContent = "flex-end";
+        break;
+      case "MIN":
+        alignContent = "flex-start";
+        break;
+      case "STRETCH":
+        alignContent = "stretch";
+        break;
+      case "AUTO":
+        alignContent = "normal";
+        break;
+      default:
+        alignContent = "normal";
+    }
+  }
+
+  // Gap and padding
+  const gapValue = typeof node.itemSpacing === "number" ? node.itemSpacing : 0;
+  const pL = typeof node.paddingLeft === "number" ? node.paddingLeft : 0;
+  const pR = typeof node.paddingRight === "number" ? node.paddingRight : 0;
+  const pT = typeof node.paddingTop === "number" ? node.paddingTop : 0;
+  const pB = typeof node.paddingBottom === "number" ? node.paddingBottom : 0;
+
+  // Positioning of the flex container itself: use root-aware rules
+  let containerPos = "";
+  if ("x" in node && "y" in node) {
+    if (isRoot) {
+      containerPos = ` position:relative; left:0px; top:0px;`;
+    } else {
+      const useRelative = !!parent && !isChildOfRoot;
+      const left =
+        useRelative && parent && "x" in parent
+          ? node.x - (parent as any).x
+          : node.x;
+      const top =
+        useRelative && parent && "y" in parent
+          ? node.y - (parent as any).y
+          : node.y;
+      containerPos = ` position:relative; left:${left}px; top:${top}px;`;
+    }
+  }
+
+  const gapCss =
+    node.primaryAxisAlignItems === "SPACE_BETWEEN" ? "" : ` gap:${gapValue}px;`;
+  const alignContentCss =
+    wrap === "nowrap" ? "" : ` align-content:${alignContent};`;
+  const css = `display:flex;${flexFlow} flex-direction:${direction}; flex-wrap:${wrap}; justify-content:${justify}; align-items:${align};${alignContentCss}${gapCss} padding:${pT}px ${pR}px ${pB}px ${pL}px; width:${node.width}px; height:${node.height}px;${containerPos}`;
+
+  let childrenHtml = "";
+  for (const child of node.children) {
+    const childIsChildOfRoot = parent == null;
+    childrenHtml += convertNode(
+      child,
+      level + 1,
+      node,
+      true,
+      childIsChildOfRoot,
+      false
+    );
+  }
+
+  return `${indent(level)}<${tag} style="${css}">\n${childrenHtml}${indent(
+    level
+  )}</${tag}>\n`;
+}
+
+// ======================================================
+// EXTRACT NODE PROPERTIES
+// ======================================================
+function extractNodeProperties(node: SceneNode): any {
+  const out: any = { id: node.id, name: node.name, type: node.type };
+  if ("width" in node) out.width = node.width;
+  if ("height" in node) out.height = node.height;
+  if ("x" in node) out.x = node.x;
+  if ("y" in node) out.y = node.y;
+  if ("rotation" in node) out.rotation = node.rotation;
+  if ("cornerRadius" in node) out.cornerRadius = node.cornerRadius;
+
   if (node.type === "TEXT") {
     const t = node as TextNode;
     if (typeof t.fontSize === "number") out.fontSize = t.fontSize;
@@ -419,88 +396,69 @@ function extractNodeProperties(node: SceneNode) {
     out.textAlignHorizontal = t.textAlignHorizontal;
   }
 
-  // Fills / strokes (keep raw simplified arrays)
   if ("fills" in node) {
-    try {
-      out.fills = Array.isArray((node as any).fills)
-        ? (node as any).fills.map((p: any) => {
-            if (!p) return p;
-            if (p.type === "SOLID")
-              return { type: "SOLID", color: p.color, opacity: p.opacity };
-            return { type: p.type };
-          })
-        : (node as any).fills;
-    } catch (e) {
-      out.fills = (node as any).fills;
-    }
-    // backward-compatible single-fill hex
+    out.fills = Array.isArray(node.fills)
+      ? node.fills.map((f) => ({ ...f }))
+      : node.fills;
     const singleFill = getFillColor(node);
     if (singleFill) out.fill = singleFill;
   }
 
   if ("strokes" in node) {
-    try {
-      out.strokes = Array.isArray((node as any).strokes)
-        ? (node as any).strokes.map((s: any) => {
-            if (!s) return s;
-            if (s.type === "SOLID")
-              return { type: "SOLID", color: s.color, opacity: s.opacity };
-            return { type: s.type };
-          })
-        : (node as any).strokes;
-    } catch (e) {
-      out.strokes = (node as any).strokes;
-    }
+    out.strokes = Array.isArray(node.strokes)
+      ? node.strokes.map((s) => ({ ...s }))
+      : node.strokes;
     if ((node as any).strokeWeight)
       out.strokeWeight = (node as any).strokeWeight;
     const firstStroke = getStroke(node);
-    if (firstStroke) out.stroke = firstStroke; // backward-compatible
+    if (firstStroke) out.stroke = firstStroke;
   }
 
-  // Children: recursively serialize and include computed margin
   if ("children" in node) {
-    out.children = (node as any).children.map((child: SceneNode) => {
-      const childOut: any = extractNodeProperties(child as SceneNode);
-      // compute margin relative to this node
-      if ("x" in child && "y" in child && "x" in node && "y" in node) {
-        const m = computeMargins(child as SceneNode, node as SceneNode);
-        childOut.margin = m;
-      }
-      return childOut;
-    });
+    out.children = node.children.map((child) => extractNodeProperties(child));
+  }
+
+  // Auto-layout / Flex properties
+  if (node.type === "FRAME") {
+    const frame = node as FrameNode;
+    if ("layoutMode" in frame) out.layoutMode = frame.layoutMode;
+    if ("layoutWrap" in frame) out.layoutWrap = frame.layoutWrap;
+    if ("primaryAxisAlignItems" in frame)
+      out.primaryAxisAlignItems = frame.primaryAxisAlignItems;
+    if ("counterAxisAlignItems" in frame)
+      out.counterAxisAlignItems = frame.counterAxisAlignItems;
+    if ("counterAxisAlignContent" in frame)
+      out.counterAxisAlignContent = (frame as any).counterAxisAlignContent;
+    if ("primaryAxisSizingMode" in frame)
+      out.primaryAxisSizingMode = frame.primaryAxisSizingMode;
+    if ("counterAxisSizingMode" in frame)
+      out.counterAxisSizingMode = (frame as any).counterAxisSizingMode;
+    if ("itemSpacing" in frame) out.itemSpacing = frame.itemSpacing;
+    if ("paddingLeft" in frame) out.paddingLeft = frame.paddingLeft;
+    if ("paddingRight" in frame) out.paddingRight = frame.paddingRight;
+    if ("paddingTop" in frame) out.paddingTop = frame.paddingTop;
+    if ("paddingBottom" in frame) out.paddingBottom = frame.paddingBottom;
   }
 
   return out;
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ======================================================
 // CODEGEN MODE
 // ======================================================
 if (figma.editorType === "dev" && figma.mode === "codegen") {
   figma.codegen.on("generate", ({ node, language }) => {
-    if (!node) {
+    if (!node)
       return [
         { title: "HTML", language: "HTML", code: "<!-- No selection -->" },
       ];
-    }
 
-    if (language === "HTML") {
-      return [{ title: "HTML", language: "HTML", code: convertNode(node, 0) }];
-    }
-
-    if (language === "TAILWIND_HTML") {
-      return [
-        {
-          title: "Tailwind HTML",
-          language: "HTML",
-          code: convertNodeTailwind(node, 0),
-        },
-      ];
-    }
-
-    return [{ title: "HTML", language: "HTML", code: convertNode(node, 0) }];
+    return [
+      {
+        title: "HTML",
+        language: "HTML",
+        code: convertNode(node, 0, undefined, false, false, true),
+      },
+    ];
   });
-} else {
-  // Allow editor UI to stay open
 }
