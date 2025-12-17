@@ -5,167 +5,226 @@
     <title>Node Properties Viewer</title>
 
     <style>
-      :root {
-        --bg: #0f0f11;
-        --panel: #141416;
-        --card: #1c1c1f;
-        --border: #2b2b2f;
-        --text: #f1f1f3;
-        --muted: #a3a3aa;
-        --accent: #dcdcdf;
-        --accent-strong: #ffffff;
-        --shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
-        --radius: 12px;
-        --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-        --sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-      }
-
       * {
         box-sizing: border-box;
       }
 
       body {
-        font-family: var(--sans);
         margin: 0;
+        padding: 20px;
         min-height: 100vh;
-        background: linear-gradient(135deg, #111113 0%, #0b0b0d 100%);
-        color: var(--text);
-        padding: 22px;
+        background: #0e0e10;
+        color: #f1f1f3;
+        font-family: system-ui, sans-serif;
         display: flex;
         justify-content: center;
         align-items: flex-start;
       }
 
       .shell {
-        width: min(800px, 100%);
-        background: var(--panel);
-        border: 1px solid var(--border);
-        box-shadow: var(--shadow);
-        border-radius: var(--radius);
-        padding: 18px 18px 16px;
-      }
-
-      .header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        margin-bottom: 14px;
+        width: 100%;
+        max-width: 760px;
+        background: #141416;
+        border: 1px solid #2b2b2f;
+        border-radius: 10px;
+        padding: 16px;
       }
 
       h3 {
-        margin: 0;
+        margin: 0 0 12px;
         font-size: 14px;
-        letter-spacing: 0.2px;
       }
 
       .status {
-        display: inline-flex;
+        display: flex;
         align-items: center;
         gap: 8px;
-        padding: 10px 12px;
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid var(--border);
-        color: var(--muted);
+        padding: 8px 10px;
         font-size: 12px;
+        color: #a3a3aa;
+        border: 1px solid #2b2b2f;
+        border-radius: 8px;
+        background: #1a1a1d;
       }
 
       .dot {
-        width: 9px;
-        height: 9px;
-        border-radius: 999px;
-        background: var(--accent-strong);
-        box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.08);
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #ffffff;
       }
 
       .card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 14px;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+        margin-top: 12px;
+        padding: 12px;
+        border: 1px solid #2b2b2f;
+        border-radius: 8px;
+        background: #1c1c1f;
       }
 
       .card-title {
-        margin: 0 0 8px;
+        margin: 6px;
         font-size: 12px;
-        color: var(--muted);
-        letter-spacing: 0.3px;
+        color: #a3a3aa;
       }
 
-      #node-json {
+      pre {
+        margin: 0;
+        padding: 10px;
+        font-size: 12px;
+        background: #161618;
+        border-radius: 6px;
+        border: 1px solid #2b2b2f;
+        color: #ffffff;
+        overflow-x: auto;
+        line-height: 1.8;
+      }
+
+      .json-key {
+        color: #b8d4e6;
+        font-weight: 500;
+      }
+
+      .json-value {
+        color: #c0d8b8;
+      }
+
+      .json-string {
+        color: #e6b8b8;
+      }
+
+      .json-number {
+        color: #d8c0b8;
+      }
+
+      .json-null {
+        color: #a8a8b8;
+      }
+
+      .properties-container {
+        display: grid;
+        gap: 10px;
         margin-top: 8px;
-        max-height: 340px;
-        overflow: auto;
-        background: rgba(255, 255, 255, 0.02);
-        border-radius: 9px;
-        padding: 13px;
-        font-family: var(--mono);
-        font-size: 11.5px;
-        white-space: pre;
-        color: var(--accent-strong);
-        line-height: 1.55;
-        border: 1px solid var(--border);
       }
 
-      .no-selection {
-        color: var(--muted);
-        font-style: italic;
-      }
-
-      .row {
-        display: flex;
+      .property-row {
+        display: grid;
+        grid-template-columns: 120px 1fr;
         gap: 12px;
-        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+
+      .property-label {
+        font-size: 11px;
+        color: #a3a3aa;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+        padding-top: 4px;
+      }
+
+      .property-value {
+        padding: 8px 10px;
+        background: #161618;
+        border: 1px solid #2b2b2f;
+        border-radius: 6px;
+        font-size: 12px;
+        color: #e6b8b8;
+        word-break: break-all;
+      }
+
+      .hidden {
+        display: none;
       }
     </style>
   </head>
 
   <body>
     <div class="shell">
-      <div class="header">
-        <h3>Selected Node</h3>
-      </div>
+      <h3>Selected Node</h3>
 
       <div class="status" id="selection-status">
         <span class="dot"></span>
         <span>No selection yet.</span>
       </div>
 
-      <div class="card" style="margin-top: 12px">
-        <p class="card-title">Properties (JSON)</p>
-        <pre id="node-json"></pre>
+      <div class="card">
+        <p class="card-title">Node Details</p>
+        <div class="properties-container" id="properties-display"></div>
+        <div class="card" style="margin-top: 12px; padding: 10px">
+          <p class="card-title">Full JSON</p>
+          <pre id="node-json"></pre>
+        </div>
       </div>
     </div>
 
     <script>
-      const statusEl = document.getElementById("selection-status");
-      const jsonEl = document.getElementById("node-json");
+      const statusElement = document.getElementById("selection-status");
+      const propertiesDisplay = document.getElementById("properties-display");
+      const jsonElement = document.getElementById("node-json");
+      const dotElement = statusElement.querySelector(".dot");
+      const textElement = statusElement.querySelector("span:nth-child(2)");
 
       function setStatus(text, selected) {
-        statusEl.querySelector("span:nth-child(2)").textContent = text;
-        statusEl.classList.toggle("no-selection", !selected);
-        statusEl.querySelector(".dot").style.opacity = selected ? "1" : "0.35";
+        textElement.textContent = text;
+        dotElement.style.opacity = selected ? "1" : "0.35";
       }
 
-      function setJson(data) {
-        jsonEl.textContent = data ? JSON.stringify(data, null, 2) : "";
-      }
-
-      window.onmessage = (event) => {
-        const msg = event.data.pluginMessage;
-        if (!msg) return;
-
-        if (msg.type === "selection-update") {
-          setStatus(`Selected: ${msg.data.name} (${msg.data.type})`, true);
-          setJson(msg.data);
+      function displayNodeDetails(data) {
+        if (!data) {
+          propertiesDisplay.innerHTML = "";
+          jsonElement.textContent = "";
           return;
         }
 
-        if (msg.type === "no-selection") {
+        // Show key properties in UI-friendly format
+        const keyProps = [
+          "id",
+          "name",
+          "type",
+          "width",
+          "height",
+          "x",
+          "y",
+          "rotation",
+          "cornerRadius",
+        ];
+        let html = "";
+
+        for (const prop of keyProps) {
+          if (prop in data) {
+            const value = data[prop];
+            const displayValue = value === null ? "null" : String(value);
+            html += `
+              <div class="property-row">
+                <div class="property-label">${prop}</div>
+                <div class="property-value">${displayValue}</div>
+              </div>
+            `;
+          }
+        }
+
+        propertiesDisplay.innerHTML = html;
+
+        // Show full JSON as well
+        jsonElement.textContent = JSON.stringify(data, null, 2);
+      }
+
+      window.onmessage = (event) => {
+        const message = event.data.pluginMessage;
+        if (!message) return;
+
+        if (message.type === "selection-update") {
+          setStatus(
+            `Selected: ${message.data.name} (${message.data.type})`,
+            true
+          );
+          displayNodeDetails(message.data);
+        }
+
+        if (message.type === "no-selection") {
           setStatus("No node selected.", false);
-          setJson(null);
+          displayNodeDetails(null);
         }
       };
     </script>
