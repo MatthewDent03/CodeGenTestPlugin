@@ -160,7 +160,6 @@
 
     <script>
       const statusElement = document.getElementById("selection-status");
-      const propertiesDisplay = document.getElementById("properties-display");
       const jsonElement = document.getElementById("node-json");
       const dotElement = statusElement.querySelector(".dot");
       const textElement = statusElement.querySelector("span:nth-child(2)");
@@ -170,44 +169,21 @@
         dotElement.style.opacity = selected ? "1" : "0.35";
       }
 
-      function displayNodeDetails(data) {
+      function setJsonDisplay(data) {
         if (!data) {
-          propertiesDisplay.innerHTML = "";
           jsonElement.textContent = "";
           return;
         }
 
-        // Show key properties in UI-friendly format
-        const keyProps = [
-          "id",
-          "name",
-          "type",
-          "width",
-          "height",
-          "x",
-          "y",
-          "rotation",
-          "cornerRadius",
-        ];
-        let html = "";
+        const jsonString = JSON.stringify(data, null, 2);
+        const highlighted = jsonString
+          .replace(/"([^"]+)":\s*/g, '<span class="json-key">"$1":</span> ')
+          .replace(/:\s*"([^"]*)"/g, ': <span class="json-string">"$1"</span>')
+          .replace(/:\s*(\d+\.?\d*)/g, ': <span class="json-number">$1</span>')
+          .replace(/:\s*(true|false)/g, ': <span class="json-value">$1</span>')
+          .replace(/:\s*null/g, ': <span class="json-null">null</span>');
 
-        for (const prop of keyProps) {
-          if (prop in data) {
-            const value = data[prop];
-            const displayValue = value === null ? "null" : String(value);
-            html += `
-              <div class="property-row">
-                <div class="property-label">${prop}</div>
-                <div class="property-value">${displayValue}</div>
-              </div>
-            `;
-          }
-        }
-
-        propertiesDisplay.innerHTML = html;
-
-        // Show full JSON as well
-        jsonElement.textContent = JSON.stringify(data, null, 2);
+        jsonElement.innerHTML = highlighted;
       }
 
       window.onmessage = (event) => {
@@ -219,12 +195,12 @@
             `Selected: ${message.data.name} (${message.data.type})`,
             true
           );
-          displayNodeDetails(message.data);
+          setJsonDisplay(message.data);
         }
 
         if (message.type === "no-selection") {
           setStatus("No node selected.", false);
-          displayNodeDetails(null);
+          setJsonDisplay(null);
         }
       };
     </script>

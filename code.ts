@@ -24,7 +24,7 @@ if (figma.editorType === "figma") {
 
 // ======================================================
 // INDENT HELPER
-// Two-space indentation for generated HTML markup.
+// Two-space indentation for generated HTML
 // ======================================================
 function indent(level: number): string {
   return "  ".repeat(level);
@@ -44,7 +44,7 @@ function computeMargins(node: SceneNode, parent: SceneNode) {
 }
 
 function computeMarginsWithFrame(node: SceneNode, parent: SceneNode) {
-  // assume both node and parent have x/y/width/height where applicable
+  // node and parent have x/y/width/height
   const top = node.y;
   const left = node.x;
   const right = parent.width - node.width - left;
@@ -55,7 +55,7 @@ function computeMarginsWithFrame(node: SceneNode, parent: SceneNode) {
 }
 
 function computeMarginsNotFrame(node: SceneNode, parent: SceneNode) {
-  // assume both node and parent have x/y/width/height where applicable
+  // node and parent have x/y/width/height
   const top = node.y - parent.y;
   const left = node.x - parent.x;
   const right = parent.width - (node.x - parent.x + node.width);
@@ -65,7 +65,7 @@ function computeMarginsNotFrame(node: SceneNode, parent: SceneNode) {
 
 // ======================================================
 // FILL HELPERS
-// First solid fill as #rrggbb (or null when none).
+// solid fill as #rrggbb or null if none
 // ======================================================
 function getFillColor(node: SceneNode): string | null {
   if ("fills" in node && Array.isArray(node.fills) && node.fills.length > 0) {
@@ -84,7 +84,7 @@ function getFillColor(node: SceneNode): string | null {
 
 // ======================================================
 // STROKE HELPERS
-// First solid stroke as { color, width } (or null when none).
+// solid stroke as { color, width } or null
 // ======================================================
 function getStroke(node: SceneNode): { color: string; width: number } | null {
   if ("strokes" in node && node.strokes.length > 0) {
@@ -129,8 +129,8 @@ function buildCSS(node: SceneNode, parent?: SceneNode): string {
 
   // Add margin relative to parent if available
   if (parent && "x" in parent && "y" in parent) {
-    const m = computeMargins(node, parent);
-    cssText += ` margin-top:${m.top}px; margin-left:${m.left}px; margin-right:${m.right}px; margin-bottom:${m.bottom}px;`;
+    const margin = computeMargins(node, parent);
+    cssText += ` margin-top:${margin.top}px; margin-left:${margin.left}px; margin-right:${margin.right}px; margin-bottom:${margin.bottom}px;`;
   }
 
   return cssText;
@@ -295,11 +295,11 @@ function convertShapeTailwind(
 
   // Margin relative to parent
   if (parent) {
-    const m = computeMargins(node, parent);
-    classList.push(`mt-[${m.top}px]`);
-    classList.push(`ml-[${m.left}px]`);
-    classList.push(`mr-[${m.right}px]`);
-    classList.push(`mb-[${m.bottom}px]`);
+    const margin = computeMargins(node, parent);
+    classList.push(`mt-[${margin.top}px]`);
+    classList.push(`ml-[${margin.left}px]`);
+    classList.push(`mr-[${margin.right}px]`);
+    classList.push(`mb-[${margin.bottom}px]`);
   }
 
   return `${indent(level)}<${htmlTag} class="${classList.join(
@@ -340,12 +340,12 @@ function convertTextNodeTailwind(
 
   // Add margin classes relative to parent when available
   if (parent) {
-    const m = computeMargins(node as SceneNode, parent);
+    const margin = computeMargins(node as SceneNode, parent);
     textClasses.push(
-      `mt-[${m.top}px]`,
-      `ml-[${m.left}px]`,
-      `mr-[${m.right}px]`,
-      `mb-[${m.bottom}px]`
+      `mt-[${margin.top}px]`,
+      `ml-[${margin.left}px]`,
+      `mr-[${margin.right}px]`,
+      `mb-[${margin.bottom}px]`
     );
   }
 
@@ -373,11 +373,11 @@ function convertFrameTailwind(
 
   // Margin relative to parent
   if (parent) {
-    const m = computeMargins(node, parent);
-    classList.push(`mt-[${m.top}px]`);
-    classList.push(`ml-[${m.left}px]`);
-    classList.push(`mr-[${m.right}px]`);
-    classList.push(`mb-[${m.bottom}px]`);
+    const margin = computeMargins(node, parent);
+    classList.push(`mt-[${margin.top}px]`);
+    classList.push(`ml-[${margin.left}px]`);
+    classList.push(`mr-[${margin.right}px]`);
+    classList.push(`mb-[${margin.bottom}px]`);
   }
 
   let childrenHtml = "";
@@ -392,19 +392,16 @@ function convertFrameTailwind(
 
 // ======================================================
 // PROPERTY EXTRACTOR FOR UI (WITH MARGINS)
-// Serialize nodes for the UI panel, including child margins.
 // ======================================================
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function extractNodeProperties(node: SceneNode) {
-  // Build a serializable object that mirrors the node's own property names
-  // while keeping a couple of backward-compatible keys (`fill`, `stroke`).
   const out: any = {
     id: node.id,
     name: node.name,
     type: node.type,
   };
 
-  // Copy common geometry / transform properties if present
+  // geometry / transform properties
   if ("width" in node) out.width = (node as any).width;
   if ("height" in node) out.height = (node as any).height;
   if ("x" in node) out.x = (node as any).x;
@@ -421,7 +418,7 @@ function extractNodeProperties(node: SceneNode) {
     out.textAlignHorizontal = t.textAlignHorizontal;
   }
 
-  // Fills / strokes (keep raw simplified arrays)
+  // Fills / strokes
   if ("fills" in node) {
     try {
       out.fills = Array.isArray((node as any).fills)
@@ -435,7 +432,6 @@ function extractNodeProperties(node: SceneNode) {
     } catch (e) {
       out.fills = (node as any).fills;
     }
-    // backward-compatible single-fill hex
     const singleFill = getFillColor(node);
     if (singleFill) out.fill = singleFill;
   }
@@ -456,10 +452,10 @@ function extractNodeProperties(node: SceneNode) {
     if ((node as any).strokeWeight)
       out.strokeWeight = (node as any).strokeWeight;
     const firstStroke = getStroke(node);
-    if (firstStroke) out.stroke = firstStroke; // backward-compatible
+    if (firstStroke) out.stroke = firstStroke;
   }
 
-  // Children: recursively serialize and include computed margin
+  // Children: include computed margin
   if ("children" in node) {
     out.children = (node as any).children.map((child: SceneNode) => {
       const childOut: any = extractNodeProperties(child as SceneNode);
