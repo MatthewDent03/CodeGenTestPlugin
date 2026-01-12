@@ -1,5 +1,3 @@
-
-
 // Font size mapping
 const fontSizeMap: Record<number, string> = {
   12: "xs", // 0.75rem
@@ -505,8 +503,8 @@ function paddingToTailwind(padding: any): string[] {
   const classes: string[] = [];
   if (typeof padding === "number") {
     if (padding > 0) {
-      const cls = findClosest(padding, spacingMap);
-      if (cls) classes.push(`p-${cls}`);
+      const tailwindClass = findClosest(padding, spacingMap);
+      if (tailwindClass) classes.push(`p-${tailwindClass}`);
       else classes.push(`p-[${padding}px]`);
     }
   } else if (typeof padding === "object") {
@@ -515,25 +513,33 @@ function paddingToTailwind(padding: any): string[] {
     const bottom = padding.bottom || 0;
     const left = padding.left || 0;
     if (top === right && right === bottom && bottom === left && top > 0) {
-      const cls = findClosest(top, spacingMap);
-      if (cls) classes.push(`p-${cls}`);
+      const tailwindClass = findClosest(top, spacingMap);
+      if (tailwindClass) classes.push(`p-${tailwindClass}`);
       else classes.push(`p-[${top}px]`);
     } else {
       if (top > 0) {
-        const cls = findClosest(top, spacingMap);
-        classes.push(cls ? `pt-${cls}` : `pt-[${top}px]`);
+        const paddingTopClass = findClosest(top, spacingMap);
+        classes.push(
+          paddingTopClass ? `pt-${paddingTopClass}` : `pt-[${top}px]`
+        );
       }
       if (right > 0) {
-        const cls = findClosest(right, spacingMap);
-        classes.push(cls ? `pr-${cls}` : `pr-[${right}px]`);
+        const paddingRightClass = findClosest(right, spacingMap);
+        classes.push(
+          paddingRightClass ? `pr-${paddingRightClass}` : `pr-[${right}px]`
+        );
       }
       if (bottom > 0) {
-        const cls = findClosest(bottom, spacingMap);
-        classes.push(cls ? `pb-${cls}` : `pb-[${bottom}px]`);
+        const paddingBottomClass = findClosest(bottom, spacingMap);
+        classes.push(
+          paddingBottomClass ? `pb-${paddingBottomClass}` : `pb-[${bottom}px]`
+        );
       }
       if (left > 0) {
-        const cls = findClosest(left, spacingMap);
-        classes.push(cls ? `pl-${cls}` : `pl-[${left}px]`);
+        const paddingLeftClass = findClosest(left, spacingMap);
+        classes.push(
+          paddingLeftClass ? `pl-${paddingLeftClass}` : `pl-[${left}px]`
+        );
       }
     }
   }
@@ -543,63 +549,67 @@ function paddingToTailwind(padding: any): string[] {
 function radiusToTailwind(radius: any): string {
   if (!radius) return "";
   if (typeof radius === "number") {
-    const cls = findClosest(radius, radiusMap);
-    if (cls === "none") return "rounded-none";
-    if (cls === "") return "rounded";
-    if (cls) return `rounded-${cls}`;
+    const radiusClass = findClosest(radius, radiusMap);
+    if (radiusClass === "none") return "rounded-none";
+    if (radiusClass === "") return "rounded";
+    if (radiusClass) return `rounded-${radiusClass}`;
     return `rounded-[${radius}px]`;
   } else if (typeof radius === "object") {
-    const tl = radius.topLeft || 0;
-    const tr = radius.topRight || 0;
-    const br = radius.bottomRight || 0;
-    const bl = radius.bottomLeft || 0;
-    if (tl === tr && tr === br && br === bl) {
-      const cls = findClosest(tl, radiusMap);
-      if (cls === "none") return "rounded-none";
-      if (cls === "") return "rounded";
-      if (cls) return `rounded-${cls}`;
-      return `rounded-[${tl}px]`;
+    const topLeft = radius.topLeft || 0;
+    const topRight = radius.topRight || 0;
+    const bottomRight = radius.bottomRight || 0;
+    const bottomLeft = radius.bottomLeft || 0;
+    if (
+      topLeft === topRight &&
+      topRight === bottomRight &&
+      bottomRight === bottomLeft
+    ) {
+      const radiusClass = findClosest(topLeft, radiusMap);
+      if (radiusClass === "none") return "rounded-none";
+      if (radiusClass === "") return "rounded";
+      if (radiusClass) return `rounded-${radiusClass}`;
+      return `rounded-[${topLeft}px]`;
     } else {
       const classes: string[] = [];
-      const tlCls = findClosest(tl, radiusMap);
-      const trCls = findClosest(tr, radiusMap);
-      const brCls = findClosest(br, radiusMap);
-      const blCls = findClosest(bl, radiusMap);
-      if (tlCls === "none") {
+      const topLeftClass = findClosest(topLeft, radiusMap);
+      const topRightClass = findClosest(topRight, radiusMap);
+      const bottomRightClass = findClosest(bottomRight, radiusMap);
+      const bottomLeftClass = findClosest(bottomLeft, radiusMap);
+      if (topLeftClass === "none") {
         // skip
-      } else if (tlCls === "") {
+      } else if (topLeftClass === "") {
         classes.push("rounded-tl");
-      } else if (tlCls) {
-        classes.push(`rounded-tl-${tlCls}`);
-      } else if (tl > 0) {
-        classes.push(`rounded-tl-[${tl}px]`);
+      } else if (topLeftClass) {
+        classes.push(`rounded-tl-${topLeftClass}`);
+      } else if (topLeft > 0) {
+        classes.push(`rounded-tl-[${topLeft}px]`);
       }
-      if (trCls === "none") {
+      if (topRightClass === "none") {
         // skip
-      } else if (trCls === "") {
+      } else if (topRightClass === "") {
         classes.push("rounded-tr");
-      } else if (trCls) {
-        classes.push(`rounded-tr-${trCls}`);
-      } else if (tr > 0) {
-        classes.push(`rounded-tr-[${tr}px]`);
+      } else if (topRightClass) {
+        classes.push(`rounded-tr-${topRightClass}`);
+      } else if (topRight > 0) {
+        classes.push(`rounded-tr-[${topRight}px]`);
       }
-      if (brCls === "none") {
+      if (bottomRightClass === "none") {
         // skip
-      } else if (brCls === "") {
+      } else if (bottomRightClass === "") {
         classes.push("rounded-br");
-      } else if (brCls) {
-        classes.push(`rounded-br-${brCls}`);
-      } else if (br > 0) {
-        classes.push(`rounded-br-[${br}px]`);
+      } else if (bottomRightClass) {
+        classes.push(`rounded-br-${bottomRightClass}`);
+      } else if (bottomRight > 0) {
+        classes.push(`rounded-br-[${bottomRight}px]`);
       }
-      if (blCls === "none") {
+      if (bottomLeftClass === "none") {
         // skip
-      } else if (blCls === "") {
+      } else if (bottomLeftClass === "") {
         classes.push("rounded-bl");
-      } else if (blCls) {
-        classes.push(`rounded-bl-${blCls}`);
-      } else if (bl > 0) {
-        classes.push(`rounded-bl-[${bl}px]`);
+      } else if (bottomLeftClass) {
+        classes.push(`rounded-bl-${bottomLeftClass}`);
+      } else if (bottomLeft > 0) {
+        classes.push(`rounded-bl-[${bottomLeft}px]`);
       }
       return classes.join(" ");
     }
@@ -609,16 +619,16 @@ function radiusToTailwind(radius: any): string {
 
 function borderWidthToTailwind(width: number): string {
   if (width === 1) return "border";
-  const cls = findClosest(width, borderWidthMap);
-  if (cls) return `border-${cls}`;
+  const borderWidthClass = findClosest(width, borderWidthMap);
+  if (borderWidthClass) return `border-${borderWidthClass}`;
   return `border-[${width}px]`;
 }
 
 function opacityToTailwind(opacity: number): string {
   if (opacity >= 1) return "";
   const percent = Math.round(opacity * 100);
-  const cls = findClosest(percent, opacityMap);
-  if (cls) return `opacity-${cls}`;
+  const opacityClass = findClosest(percent, opacityMap);
+  if (opacityClass) return `opacity-${opacityClass}`;
   return "";
 }
 
@@ -637,7 +647,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 }
 
 /**
- * Calculate color distance 
+ * Calculate color distance
  */
 function colorDistance(hex1: string, hex2: string): number {
   const rgb1 = hexToRgb(hex1);
@@ -698,7 +708,7 @@ function colorToTailwind(
     return `text-${closestColor}`;
   }
 
-  // 3. Fallback to arbitrary 
+  // 3. Fallback to arbitrary
   if (type === "bg") return `bg-[${hex}]`;
   if (type === "border") return `border-[${hex}]`;
   return `text-[${hex}]`;
@@ -1356,8 +1366,8 @@ function convertTextNodeTailwind(
     const lineHeight = (node as any).lineHeight;
     if (lineHeight && typeof lineHeight === "object" && "value" in lineHeight) {
       const fontSize = typeof node.fontSize === "number" ? node.fontSize : 16;
-      const lh = pxToLineHeight(lineHeight.value, fontSize);
-      if (lh) textClasses.push(lh);
+      const lineHeightClass = pxToLineHeight(lineHeight.value, fontSize);
+      if (lineHeightClass) textClasses.push(lineHeightClass);
     }
   }
 
@@ -1371,8 +1381,11 @@ function convertTextNodeTailwind(
       letterSpacing.value !== 0
     ) {
       const fontSize = typeof node.fontSize === "number" ? node.fontSize : 16;
-      const ls = pxToLetterSpacing(letterSpacing.value, fontSize);
-      if (ls) textClasses.push(ls);
+      const letterSpacingClass = pxToLetterSpacing(
+        letterSpacing.value,
+        fontSize
+      );
+      if (letterSpacingClass) textClasses.push(letterSpacingClass);
     }
   }
 
@@ -1380,8 +1393,8 @@ function convertTextNodeTailwind(
   if ("opacity" in node) {
     const opacity = (node as any).opacity;
     if (opacity !== undefined && opacity < 1) {
-      const op = opacityToTailwind(opacity);
-      if (op) textClasses.push(op);
+      const opacityClass = opacityToTailwind(opacity);
+      if (opacityClass) textClasses.push(opacityClass);
     }
   }
 
