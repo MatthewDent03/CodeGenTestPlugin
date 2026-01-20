@@ -1506,6 +1506,54 @@ function convertFrameTailwind(
 // PROPERTY EXTRACTOR FOR UI
 // ======================================================
 /* eslint-disable @typescript-eslint/no-explicit-any */
+// Normalize corner radius from different Figma node shapes into a simple object
+function getCommonRadius(node: SceneNode) {
+  // rectangleCornerRadii (array) - newer API
+  if ("rectangleCornerRadii" in node) {
+    const [topLeft, topRight, bottomRight, bottomLeft] = (node as any)
+      .rectangleCornerRadii as any;
+    if (
+      topLeft === topRight &&
+      topLeft === bottomRight &&
+      topLeft === bottomLeft
+    ) {
+      return { all: topLeft };
+    }
+
+    return { topLeft, topRight, bottomRight, bottomLeft };
+  }
+
+  // legacy uniform cornerRadius
+  if (
+    "cornerRadius" in node &&
+    (node as any).cornerRadius !== figma.mixed &&
+    (node as any).cornerRadius !== undefined &&
+    (node as any).cornerRadius !== null
+  ) {
+    return { all: (node as any).cornerRadius };
+  }
+
+  // older per-corner fields
+  if ("topLeftRadius" in node) {
+    if (
+      (node as any).topLeftRadius === (node as any).topRightRadius &&
+      (node as any).topLeftRadius === (node as any).bottomRightRadius &&
+      (node as any).topLeftRadius === (node as any).bottomLeftRadius
+    ) {
+      return { all: (node as any).topLeftRadius };
+    }
+
+    return {
+      topLeft: (node as any).topLeftRadius,
+      topRight: (node as any).topRightRadius,
+      bottomRight: (node as any).bottomRightRadius,
+      bottomLeft: (node as any).bottomLeftRadius,
+    };
+  }
+
+  return { all: 0 };
+}
+
 function extractNodeProperties(node: SceneNode) {
   const out: any = {
     id: node.id,
@@ -1519,7 +1567,8 @@ function extractNodeProperties(node: SceneNode) {
   if ("x" in node) out.x = (node as any).x;
   if ("y" in node) out.y = (node as any).y;
   if ("rotation" in node) out.rotation = (node as any).rotation;
-  if ("cornerRadius" in node) out.cornerRadius = (node as any).cornerRadius;
+  // normalize corner radius into simple numeric fields
+  out.cornerRadius = getCommonRadius(node);
   if ("padding" in node) out.padding = (node as any).padding;
   if ("gap" in node) out.gap = (node as any).gap;
   if ("itemSpacing" in node) out.itemSpacing = (node as any).itemSpacing;
