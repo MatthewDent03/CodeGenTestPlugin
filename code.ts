@@ -1,4 +1,4 @@
-// Font size mapping
+// === Font size mapping ===
 const fontSizeMap: Record<number, string> = {
   12: "xs", // 0.75rem
   14: "sm", // 0.875rem
@@ -14,7 +14,7 @@ const fontSizeMap: Record<number, string> = {
   96: "8xl", // 6rem
 };
 
-// Line height mapping
+// === Line height mapping ===
 const lineHeightMap: Record<number, string> = {
   1: "none",
   1.25: "tight",
@@ -24,7 +24,7 @@ const lineHeightMap: Record<number, string> = {
   2: "loose",
 };
 
-// Letter spacing mapping
+// === Letter spacing mapping ===
 const letterSpacingMap: Record<number, string> = {
   "-0.05": "tighter",
   "-0.025": "tight",
@@ -34,7 +34,7 @@ const letterSpacingMap: Record<number, string> = {
   "0.1": "widest",
 };
 
-// Spacing scale
+// === Spacing scale ===
 const spacingMap: Record<number, string> = {
   0: "0", // 0px
   1: "px", // 1px
@@ -73,7 +73,7 @@ const spacingMap: Record<number, string> = {
   384: "96", // 384px
 };
 
-// Border radius mapping
+// === Border radius mapping ===
 const radiusMap: Record<number, string> = {
   0: "none", // 0px
   2: "sm", // 0.125rem
@@ -85,7 +85,7 @@ const radiusMap: Record<number, string> = {
   24: "3xl", // 1.5rem
 };
 
-// Border width mapping
+// === Border width mapping ===
 const borderWidthMap: Record<number, string> = {
   1: "1",
   2: "2",
@@ -93,7 +93,7 @@ const borderWidthMap: Record<number, string> = {
   8: "8",
 };
 
-// Opacity mapping (0-100%)
+// === Opacity mapping (0-100%) ===
 const opacityMap: Record<number, string> = {
   0: "0",
   5: "5",
@@ -112,7 +112,7 @@ const opacityMap: Record<number, string> = {
   100: "100",
 };
 
-// Font weight mapping
+// === Font weight mapping ===
 const fontWeightMap: Record<number, string> = {
   100: "thin",
   200: "extralight",
@@ -125,7 +125,7 @@ const fontWeightMap: Record<number, string> = {
   900: "black",
 };
 
-// Blur mapping
+// === Blur mapping ===
 const blurMap: Record<number, string> = {
   4: "sm", // 4px
   8: "", // 8px (default blur)
@@ -136,7 +136,7 @@ const blurMap: Record<number, string> = {
   64: "3xl", // 64px
 };
 
-// Tailwind color map (full v3 palette)
+// === Tailwind color map (full v3 palette) ===
 const tailwindColorMap: Record<string, string> = {
   // === SPECIAL COLORS ===
   "#000000": "black",
@@ -463,6 +463,42 @@ function pxToSize(px: number, prefix: string = "w"): string {
   return `${prefix}-[${px}px]`;
 }
 
+// Sanitize a node name to a safe CSS class (lowercase, dashes)
+function nameToClass(name: string, fallback: string): string {
+  const trimmed = (name || "").trim();
+  const slug = trimmed
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || fallback;
+}
+
+// Determine node sizing (HUG / FILL / fixed)
+function nodeSize(node: any): {
+  width: number | "fill" | null;
+  height: number | "fill" | null;
+} {
+  if ("layoutSizingHorizontal" in node && "layoutSizingVertical" in node) {
+    const width =
+      node.layoutSizingHorizontal === "FILL"
+        ? "fill"
+        : node.layoutSizingHorizontal === "HUG"
+        ? null
+        : node.width;
+
+    const height =
+      node.layoutSizingVertical === "FILL"
+        ? "fill"
+        : node.layoutSizingVertical === "HUG"
+        ? null
+        : node.height;
+
+    return { width, height };
+  }
+
+  return { width: node.width, height: node.height };
+}
+
 function pxToFontSize(px: number): string {
   const tailwindClass = findClosest(px, fontSizeMap);
   if (tailwindClass) return `text-${tailwindClass}`;
@@ -628,8 +664,8 @@ function opacityToTailwind(opacity: number): string {
   if (opacity >= 1) return "";
   const percent = Math.round(opacity * 100);
   const opacityClass = findClosest(percent, opacityMap);
-  if (opacityClass) return `opacity-${opacityClass}`;
-  return "";
+  if (opacityClass) return `${opacityClass}`;
+  return `${percent}`;
 }
 
 /**
@@ -725,14 +761,14 @@ function getAlignmentClasses(node: SceneNode): string[] {
   const layoutMode = (node as any).layoutMode;
   if (layoutMode === "NONE") return classes;
 
-  // Primary axis alignment (justify-*)
+  // Primary axis alignment
   const primaryAlign = (node as any).primaryAxisAlignItems;
   if (primaryAlign === "CENTER") classes.push("justify-center");
   else if (primaryAlign === "SPACE_BETWEEN") classes.push("justify-between");
   else if (primaryAlign === "MAX") classes.push("justify-end");
   else if (primaryAlign === "MIN") classes.push("justify-start");
 
-  // Counter axis alignment (items-*)
+  // Counter axis alignment
   const counterAlign = (node as any).counterAxisAlignItems;
   if (counterAlign === "CENTER") classes.push("items-center");
   else if (counterAlign === "MAX") classes.push("items-end");
@@ -778,10 +814,8 @@ function layoutModeToTailwind(
   return classes;
 }
 
-// ======================================================
-// PLUGIN UI (FIGMA MODE)
+// === PLUGIN UI (FIGMA MODE) ===
 // Open the panel and stream basic selection info to the iframe.
-// ======================================================
 if (figma.editorType === "figma") {
   figma.showUI(__uiFiles__.main, { width: 320, height: 400 });
 
@@ -802,18 +836,14 @@ if (figma.editorType === "figma") {
   });
 }
 
-// ======================================================
-// INDENT HELPER
+// === INDENT HELPER ===
 // Two-space indentation for generated HTML
-// ======================================================
 function indent(level: number): string {
   return "  ".repeat(level);
 }
 
-// ======================================================
-// FILL HELPERS
+// === FILL HELPERS ===
 // solid fill as #rrggbb or null if none
-// ======================================================
 function getFillColor(node: SceneNode): string | null {
   if ("fills" in node && Array.isArray(node.fills) && node.fills.length > 0) {
     const paint = node.fills[0];
@@ -829,58 +859,60 @@ function getFillColor(node: SceneNode): string | null {
   return null;
 }
 
-// ======================================================
-// STROKE HELPERS
+// === STROKE HELPERS ===
 // solid stroke as { color, width, opacity } or null
-// ======================================================
 function getStroke(
   node: SceneNode
-): { color: string; width: number; opacity: number } | null {
-  if ("strokes" in node && node.strokes.length > 0) {
-    const paint = node.strokes[0];
-    if (paint.type === "SOLID") {
+): { color: string; width: number; opacity: number; position?: string } | null {
+  if (
+    "strokes" in node &&
+    Array.isArray((node as any).strokes) &&
+    (node as any).strokes.length > 0
+  ) {
+    const paint = (node as any).strokes[0];
+    if (paint && paint.type === "SOLID") {
       const red = Math.round(paint.color.r * 255);
       const green = Math.round(paint.color.g * 255);
       const blue = Math.round(paint.color.b * 255);
+      const position = (node as any).strokeAlign || "CENTER";
       return {
         color: `#${red.toString(16).padStart(2, "0")}${green
           .toString(16)
           .padStart(2, "0")}${blue.toString(16).padStart(2, "0")}`,
         width: (node as any).strokeWeight || 1,
         opacity: paint.opacity !== undefined ? paint.opacity : 1,
+        position,
       };
     }
   }
   return null;
 }
 
-// ======================================================
-// PADDING HELPER
+// === PADDING HELPER ===
 // Handle both uniform and mixed padding values
-// ======================================================
 function getPaddingCSS(node: SceneNode): string {
   if (!("padding" in node)) return "";
 
   const padding = (node as any).padding;
   if (!padding) return "";
 
-  // Check if padding is an object with different sides
+  // Check padding object
   if (typeof padding === "object" && padding !== null) {
     const top = padding.top || 0;
     const right = padding.right || 0;
     const bottom = padding.bottom || 0;
     const left = padding.left || 0;
 
-    // If all equal, use single value
+    // all equal - single value
     if (top === right && right === bottom && bottom === left) {
       return ` padding:${top}px;`;
     }
 
-    // Otherwise use individual sides
+    // individual sides
     return ` padding:${top}px ${right}px ${bottom}px ${left}px;`;
   }
 
-  // If it's a number, use as uniform padding
+  // If number -  uniform padding
   if (typeof padding === "number") {
     return ` padding:${padding}px;`;
   }
@@ -888,24 +920,21 @@ function getPaddingCSS(node: SceneNode): string {
   return "";
 }
 
-// ======================================================
-// CORNER RADIUS HELPER
+// === CORNER RADIUS HELPER ===
 // Handle both uniform and mixed corner radius values
-// ======================================================
 function getBorderRadiusCSS(node: SceneNode): string {
   if (!("cornerRadius" in node)) return "";
 
   const cornerRadius = (node as any).cornerRadius;
   if (cornerRadius === undefined || cornerRadius === null) return "";
 
-  // Check if cornerRadius is an object with different corners
+  // Check cornerRadius object
   if (typeof cornerRadius === "object" && cornerRadius !== null) {
     const topLeft = cornerRadius.topLeft || 0;
     const topRight = cornerRadius.topRight || 0;
     const bottomRight = cornerRadius.bottomRight || 0;
     const bottomLeft = cornerRadius.bottomLeft || 0;
 
-    // If all equal, use single value
     if (
       topLeft === topRight &&
       topRight === bottomRight &&
@@ -914,11 +943,11 @@ function getBorderRadiusCSS(node: SceneNode): string {
       return ` border-radius:${topLeft}px;`;
     }
 
-    // Otherwise use individual corners
+    // individual corners
     return ` border-radius:${topLeft}px ${topRight}px ${bottomRight}px ${bottomLeft}px;`;
   }
 
-  // If it's a number, use as uniform border radius
+  // If number - border radius
   if (typeof cornerRadius === "number" && !Number.isNaN(cornerRadius)) {
     return ` border-radius:${cornerRadius}px;`;
   }
@@ -926,46 +955,8 @@ function getBorderRadiusCSS(node: SceneNode): string {
   return "";
 }
 
-// ======================================================
-// PADDING TAILWIND HELPER
-// Generate Tailwind padding classes from padding values
-// ======================================================
-function getPaddingTailwind(node: SceneNode): string[] {
-  const classes: string[] = [];
-
-  if (!("padding" in node)) return classes;
-
-  const padding = (node as any).padding;
-  if (!padding) return classes;
-
-  // Check if padding is an object with different sides
-  if (typeof padding === "object" && padding !== null) {
-    const top = padding.top || 0;
-    const right = padding.right || 0;
-    const bottom = padding.bottom || 0;
-    const left = padding.left || 0;
-
-    // If all equal, use single value
-    if (top === right && right === bottom && bottom === left) {
-      if (top > 0) classes.push(`p-[${top}px]`);
-    } else {
-      // Otherwise use individual sides
-      if (top > 0) classes.push(`pt-[${top}px]`);
-      if (right > 0) classes.push(`pr-[${right}px]`);
-      if (bottom > 0) classes.push(`pb-[${bottom}px]`);
-      if (left > 0) classes.push(`pl-[${left}px]`);
-    }
-  } else if (typeof padding === "number" && padding > 0) {
-    classes.push(`p-[${padding}px]`);
-  }
-
-  return classes;
-}
-
-// ======================================================
-// AUTO-LAYOUT TAILWIND HELPER
+// === AUTO-LAYOUT TAILWIND HELPER ===
 // Generate flex and gap classes for auto-layout frames
-// ======================================================
 function getAutoLayoutTailwind(node: SceneNode): string[] {
   const classes: string[] = [];
 
@@ -974,7 +965,7 @@ function getAutoLayoutTailwind(node: SceneNode): string[] {
   const layoutMode = (node as any).layoutMode;
   const itemSpacing = (node as any).itemSpacing || 0;
 
-  // Check if frame has auto-layout enabled
+  // Check frame auto-layout enabled
   if (layoutMode === "HORIZONTAL") {
     classes.push("flex", "flex-row");
     if (itemSpacing > 0) {
@@ -990,10 +981,8 @@ function getAutoLayoutTailwind(node: SceneNode): string[] {
   return classes;
 }
 
-// ======================================================
-// AUTO-LAYOUT CSS HELPER
+// === AUTO-LAYOUT CSS HELPER ===
 // Generate flex and gap CSS for auto-layout frames
-// ======================================================
 function getFlexGapCSS(node: SceneNode): string {
   if (!("layoutMode" in node)) return "";
 
@@ -1017,10 +1006,8 @@ function getFlexGapCSS(node: SceneNode): string {
   return css;
 }
 
-// ======================================================
-// FONT WEIGHT & STYLE HELPER
+// === FONT WEIGHT & STYLE HELPER ===
 // Extract font weight and style from fontName
-// ======================================================
 function getFontWeightAndStyle(node: SceneNode): {
   weight: string;
   style: string;
@@ -1048,10 +1035,8 @@ function getFontWeightAndStyle(node: SceneNode): {
   return result;
 }
 
-// ======================================================
-// OPACITY HELPER
+// === OPACITY HELPER ===
 // Extract opacity from node
-// ======================================================
 function getOpacityCSS(node: SceneNode): string {
   if (!("opacity" in node)) return "";
   const opacity = (node as any).opacity;
@@ -1061,10 +1046,8 @@ function getOpacityCSS(node: SceneNode): string {
   return "";
 }
 
-// ======================================================
-// SHADOW HELPER
+// === SHADOW HELPER ===
 // Extract box shadows and drop shadows
-// ======================================================
 function getShadowCSS(node: SceneNode): string {
   if (!("effects" in node)) return "";
 
@@ -1098,10 +1081,8 @@ function getShadowCSS(node: SceneNode): string {
   return "";
 }
 
-// ======================================================
-// INLINE CSS BUILDER
+// === INLINE CSS BUILDER ===
 // Size, position, fill, stroke, rotation, radius as style text.
-// ======================================================
 function buildCSS(node: SceneNode, parent?: SceneNode): string {
   let cssText = `width:${node.width}px; height:${node.height}px;`;
 
@@ -1126,18 +1107,14 @@ function buildCSS(node: SceneNode, parent?: SceneNode): string {
   return cssText;
 }
 
-// ======================================================
-// TAG PICKER
+// === TAG PICKER ===
 // Text nodes become <p>, everything else becomes <div>.
-// ======================================================
 function getTag(node: SceneNode): string {
   return node.type === "TEXT" ? "p" : "div";
 }
 
-// ======================================================
-// HTML CONVERTER
+// === HTML CONVERTER ===
 // Turn Figma nodes into plain HTML with inline styles.
-// ======================================================
 function convertNode(
   node: SceneNode,
   level: number = 0,
@@ -1167,7 +1144,7 @@ function convertTextNodeHTML(
 ): string {
   let cssText = `width:${node.width}px; height:${node.height}px;`;
 
-  // Check if parent is flex layout - if so, don't add absolute positioning
+  // Check parent flex layout
   const isParentFlex =
     parent && "layoutMode" in parent && (parent as any).layoutMode !== "NONE";
   if (!isParentFlex) {
@@ -1189,7 +1166,7 @@ function convertTextNodeHTML(
     if (fontProps.style) cssText += ` font-style:${fontProps.style};`;
   }
 
-  // Add line height if available
+  // Add line height
   if ("lineHeight" in node) {
     const lineHeight = (node as any).lineHeight;
     if (lineHeight && typeof lineHeight === "object" && "value" in lineHeight) {
@@ -1197,7 +1174,7 @@ function convertTextNodeHTML(
     }
   }
 
-  // Add letter spacing if available
+  // Add letter spacing
   if ("letterSpacing" in node) {
     const letterSpacing = (node as any).letterSpacing;
     if (
@@ -1262,10 +1239,8 @@ function convertFrameHTML(
   )}</${htmlTag}>\n`;
 }
 
-// ======================================================
-// TAILWIND CONVERTER
+// === TAILWIND CONVERTER ===
 // Turn Figma nodes into HTML that uses Tailwind utility classes.
-// ======================================================
 function convertNodeTailwind(
   node: SceneNode,
   level: number = 0,
@@ -1292,15 +1267,35 @@ function convertShapeTailwind(
 ): string {
   const classList: string[] = [];
 
+  // layer name as class 
+  if (node.name) {
+    classList.push(nameToClass(node.name, `node-${node.id}`));
+  }
+
   // Width and height
-  classList.push(pxToSize(node.width, "w"));
-  classList.push(pxToSize(node.height, "h"));
+  const _size = nodeSize(node as any);
+  // Width
+  if (_size.width === "fill") {
+    classList.push("w-full");
+  } else if (_size.width === null) {
+    classList.push("w-auto");
+  } else {
+    classList.push(pxToSize(_size.width as number, "w"));
+  }
+  // Height
+  if (_size.height === "fill") {
+    classList.push("h-full");
+  } else if (_size.height === null) {
+    classList.push("h-auto");
+  } else {
+    classList.push(pxToSize(_size.height as number, "h"));
+  }
 
   // Background color
   const fill = getFillColor(node);
   if (fill) classList.push(colorToTailwind(fill, "bg"));
 
-  // Check if parent is a flex container - if so, don't add absolute positioning
+  // Check parent flex container
   const isParentFlex =
     parent && "layoutMode" in parent && (parent as any).layoutMode !== "NONE";
   if ("x" in node && "y" in node && !isParentFlex) {
@@ -1318,12 +1313,41 @@ function convertShapeTailwind(
   // Stroke/Border
   const stroke = getStroke(node);
   if (stroke) {
-    classList.push(borderWidthToTailwind(stroke.width));
-    classList.push(colorToTailwind(stroke.color, "border"));
-    if (stroke.opacity < 1) {
-      const opacityClass = opacityToTailwind(stroke.opacity);
-      if (opacityClass) classList.push(`border-${opacityClass}`);
+    if (stroke.position === "OUTSIDE") {
+      const ringWidth = findClosest(stroke.width, borderWidthMap);
+      if (ringWidth) classList.push(`ring-${ringWidth}`);
+      else classList.push(`ring-[${stroke.width}px]`);
+      const ringColor = colorToTailwind(stroke.color, "border").replace(
+        /^border-/,
+        "ring-"
+      );
+      classList.push(ringColor);
+      if (stroke.opacity < 1) {
+        const op = opacityToTailwind(stroke.opacity);
+        if (op) classList.push(`ring-opacity-${op}`);
+      }
+    } else {
+      classList.push(borderWidthToTailwind(stroke.width));
+      classList.push(colorToTailwind(stroke.color, "border"));
+      if (stroke.opacity < 1) {
+        const op = opacityToTailwind(stroke.opacity);
+        if (op) classList.push(`border-opacity-${op}`);
+      }
+      if (stroke.position === "INSIDE") {
+        classList.push("stroke-inside");
+      }
     }
+  }
+
+  // Layout grow / self alignment for auto-layout children
+  if ((node as any).layoutGrow && (node as any).layoutGrow > 0) {
+    classList.push("flex-1");
+  }
+  if ((node as any).layoutAlign) {
+    const la = (node as any).layoutAlign;
+    if (la === "MIN") classList.push("self-start");
+    else if (la === "CENTER") classList.push("self-center");
+    else if (la === "MAX") classList.push("self-end");
   }
 
   return `${indent(level)}<${htmlTag} class="${classList
@@ -1338,6 +1362,10 @@ function convertTextNodeTailwind(
   parent?: SceneNode
 ) {
   const textClasses: string[] = [];
+
+  if (node.name) {
+    textClasses.push(nameToClass(node.name, `node-${node.id}`));
+  }
 
   // Color (text)
   const fill = getFillColor(node);
@@ -1393,8 +1421,8 @@ function convertTextNodeTailwind(
   if ("opacity" in node) {
     const opacity = (node as any).opacity;
     if (opacity !== undefined && opacity < 1) {
-      const opacityClass = opacityToTailwind(opacity);
-      if (opacityClass) textClasses.push(opacityClass);
+      const opacityVal = opacityToTailwind(opacity);
+      if (opacityVal) textClasses.push(`opacity-${opacityVal}`);
     }
   }
 
@@ -1423,9 +1451,19 @@ function convertFrameTailwind(
 ): string {
   const classList: string[] = [];
 
+  if (node.name) {
+    classList.push(nameToClass(node.name, `node-${node.id}`));
+  }
+
   // Width and height
-  classList.push(pxToSize(node.width, "w"));
-  classList.push(pxToSize(node.height, "h"));
+  const _size = nodeSize(node as any);
+  if (_size.width === "fill") classList.push("w-full");
+  else if (_size.width === null) classList.push("w-auto");
+  else classList.push(pxToSize(_size.width as number, "w"));
+
+  if (_size.height === "fill") classList.push("h-full");
+  else if (_size.height === null) classList.push("h-auto");
+  else classList.push(pxToSize(_size.height as number, "h"));
 
   // Positioning
   const isParentFlex =
@@ -1451,11 +1489,27 @@ function convertFrameTailwind(
   // Stroke/Border
   const stroke = getStroke(node);
   if (stroke) {
-    classList.push(borderWidthToTailwind(stroke.width));
-    classList.push(colorToTailwind(stroke.color, "border"));
-    if (stroke.opacity < 1) {
-      const opacityClass = opacityToTailwind(stroke.opacity);
-      if (opacityClass) classList.push(`border-${opacityClass}`);
+    if (stroke.position === "OUTSIDE") {
+      const ringWidth = findClosest(stroke.width, borderWidthMap);
+      if (ringWidth) classList.push(`ring-${ringWidth}`);
+      else classList.push(`ring-[${stroke.width}px]`);
+      const ringColor = colorToTailwind(stroke.color, "border").replace(
+        /^border-/,
+        "ring-"
+      );
+      classList.push(ringColor);
+      if (stroke.opacity < 1) {
+        const op = opacityToTailwind(stroke.opacity);
+        if (op) classList.push(`ring-opacity-${op}`);
+      }
+    } else {
+      classList.push(borderWidthToTailwind(stroke.width));
+      classList.push(colorToTailwind(stroke.color, "border"));
+      if (stroke.opacity < 1) {
+        const op = opacityToTailwind(stroke.opacity);
+        if (op) classList.push(`border-opacity-${op}`);
+      }
+      if (stroke.position === "INSIDE") classList.push("stroke-inside");
     }
   }
 
@@ -1502,13 +1556,10 @@ function convertFrameTailwind(
     .join(" ")}">\n${childrenHtml}${indent(level)}</${htmlTag}>\n`;
 }
 
-// ======================================================
-// PROPERTY EXTRACTOR FOR UI
-// ======================================================
+// === PROPERTY EXTRACTOR FOR UI ===
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Normalize corner radius from different Figma node shapes into a simple object
 function getCommonRadius(node: SceneNode) {
-  // rectangleCornerRadii (array) - newer API
+  // rectangleCornerRadii
   if ("rectangleCornerRadii" in node) {
     const [topLeft, topRight, bottomRight, bottomLeft] = (node as any)
       .rectangleCornerRadii as any;
@@ -1523,7 +1574,7 @@ function getCommonRadius(node: SceneNode) {
     return { topLeft, topRight, bottomRight, bottomLeft };
   }
 
-  // legacy uniform cornerRadius
+  //  cornerRadius
   if (
     "cornerRadius" in node &&
     (node as any).cornerRadius !== figma.mixed &&
@@ -1533,7 +1584,7 @@ function getCommonRadius(node: SceneNode) {
     return { all: (node as any).cornerRadius };
   }
 
-  // older per-corner fields
+  // per-corner
   if ("topLeftRadius" in node) {
     if (
       (node as any).topLeftRadius === (node as any).topRightRadius &&
@@ -1567,12 +1618,14 @@ function extractNodeProperties(node: SceneNode) {
   if ("x" in node) out.x = (node as any).x;
   if ("y" in node) out.y = (node as any).y;
   if ("rotation" in node) out.rotation = (node as any).rotation;
-  // normalize corner radius into simple numeric fields
+  // corner radius - numeric fields
   out.cornerRadius = getCommonRadius(node);
   if ("padding" in node) out.padding = (node as any).padding;
   if ("gap" in node) out.gap = (node as any).gap;
   if ("itemSpacing" in node) out.itemSpacing = (node as any).itemSpacing;
   if ("layoutMode" in node) out.layoutMode = (node as any).layoutMode;
+  if ("layoutGrow" in node) out.layoutGrow = (node as any).layoutGrow;
+  if ("layoutAlign" in node) out.layoutAlign = (node as any).layoutAlign;
 
   // Text properties
   if (node.type === "TEXT") {
@@ -1618,6 +1671,7 @@ function extractNodeProperties(node: SceneNode) {
       out.strokeWeight = (node as any).strokeWeight;
     const firstStroke = getStroke(node);
     if (firstStroke) out.stroke = firstStroke;
+    if ((node as any).strokeAlign) out.strokeAlign = (node as any).strokeAlign;
   }
 
   // Children
@@ -1632,10 +1686,8 @@ function extractNodeProperties(node: SceneNode) {
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-// ======================================================
-// CODEGEN MODE
+// === CODEGEN MODE ===
 // When Dev Mode asks, return HTML or Tailwind snippets for the selection.
-// ======================================================
 if (figma.editorType === "dev" && figma.mode === "codegen") {
   figma.codegen.on("generate", ({ node, language }) => {
     if (!node) {

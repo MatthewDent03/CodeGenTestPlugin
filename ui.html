@@ -5,169 +5,230 @@
     <title>Node Properties Viewer</title>
 
     <style>
+      :root {
+        --bg: #0b0b0d;
+        --panel: #0f1113;
+        --muted: #9aa0a6;
+        --accent: #7dd3fc;
+        --card: #0f1214;
+        --border: rgba(255, 255, 255, 0.04);
+        --glass: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.02),
+          rgba(255, 255, 255, 0.01)
+        );
+      }
+
       * {
         box-sizing: border-box;
       }
-
+      html,
+      body {
+        height: 100%;
+      }
       body {
         margin: 0;
-        padding: 20px;
+        padding: 18px;
         min-height: 100vh;
-        background: #0e0e10;
-        color: #f1f1f3;
-        font-family: system-ui, sans-serif;
+        background: var(--bg);
+        color: #e6eef6;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+          Roboto, "Helvetica Neue", Arial;
         display: flex;
-        justify-content: center;
         align-items: flex-start;
+        justify-content: center;
       }
 
       .shell {
         width: 100%;
-        max-width: 760px;
-        background: #141416;
-        border: 1px solid #2b2b2f;
-        border-radius: 10px;
-        padding: 16px;
+        max-width: 780px;
+        background: var(--panel);
+        border-radius: 12px;
+        padding: 14px;
+        border: 1px solid var(--border);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
       }
 
-      h3 {
-        margin: 0 0 12px;
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: var(--accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #042b35;
+        font-weight: 700;
+      }
+      h1 {
         font-size: 14px;
+        margin: 0;
+      }
+      .subtitle {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 2px;
       }
 
       .status {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         padding: 8px 10px;
-        font-size: 12px;
-        color: #a3a3aa;
-        border: 1px solid #2b2b2f;
+        font-size: 13px;
+        color: var(--muted);
         border-radius: 8px;
-        background: #1a1a1d;
+        background: var(--card);
+        border: 1px solid var(--border);
       }
-
-      .dot {
-        width: 8px;
-        height: 8px;
+      .status .dot {
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
-        background: #ffffff;
+        background: #334155;
+        box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.08);
       }
 
-      .card {
+      .main {
+        display: grid;
+        grid-template-columns: 1fr 360px;
+        gap: 12px;
         margin-top: 12px;
-        padding: 12px;
-        border: 1px solid #2b2b2f;
-        border-radius: 8px;
-        background: #1c1c1f;
       }
 
-      .card-title {
-        margin: 6px;
+      .panel {
+        background: var(--card);
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+      }
+      .panel .panel-title {
         font-size: 12px;
-        color: #a3a3aa;
+        color: var(--muted);
+        margin: 0 0 8px;
+      }
+
+      .properties {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .prop {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px;
+        border-radius: 8px;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.01),
+          transparent
+        );
+        border: 1px solid rgba(255, 255, 255, 0.02);
+      }
+      .prop .k {
+        font-size: 12px;
+        color: var(--muted);
+        min-width: 120px;
+      }
+      .prop .v {
+        font-size: 13px;
+        color: #dbeafe;
+        word-break: break-all;
       }
 
       pre {
         margin: 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        line-height: 1.6;
         padding: 10px;
+        border-radius: 8px;
+        background: #060608;
+        color: #cfe9ff;
+        border: 1px solid rgba(255, 255, 255, 0.03);
+        max-height: 300px;
+        overflow: auto;
+      }
+
+      .controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .btn {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        color: var(--accent);
+        padding: 6px 8px;
+        border-radius: 8px;
         font-size: 12px;
-        background: #161618;
-        border-radius: 6px;
-        border: 1px solid #2b2b2f;
-        color: #ffffff;
-        overflow-x: auto;
-        line-height: 1.8;
+        cursor: pointer;
+      }
+      .btn.ghost {
+        color: var(--muted);
       }
 
-      .json-key {
-        color: #b8d4e6;
-        font-weight: 500;
-      }
-
-      .json-value {
-        color: #c0d8b8;
-      }
-
-      .json-string {
-        color: #e6b8b8;
-      }
-
-      .json-number {
-        color: #d8c0b8;
-      }
-
-      .json-null {
-        color: #a8a8b8;
-      }
-
-      .properties-container {
-        display: grid;
-        gap: 10px;
-        margin-top: 8px;
-      }
-
-      .property-row {
-        display: grid;
-        grid-template-columns: 120px 1fr;
-        gap: 12px;
-        align-items: flex-start;
-      }
-
-      .property-label {
-        font-size: 11px;
-        color: #a3a3aa;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        font-weight: 500;
-        padding-top: 4px;
-      }
-
-      .property-value {
-        padding: 8px 10px;
-        background: #161618;
-        border: 1px solid #2b2b2f;
-        border-radius: 6px;
+      .small-muted {
         font-size: 12px;
-        color: #e6b8b8;
-        word-break: break-all;
+        color: var(--muted);
       }
 
-      .hidden {
-        display: none;
+      /* scrollbar */
+      pre::-webkit-scrollbar,
+      .panel::-webkit-scrollbar {
+        height: 10px;
+        width: 10px;
+      }
+      pre::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 6px;
+      }
+
+      @media (max-width: 760px) {
+        .main {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
 
   <body>
     <div class="shell">
-      <h3>Selected Node</h3>
+      <div class="header">
+        <div class="title">
+          <div class="logo">&lt;/&gt;</div>
+          <div>
+            <h1>Simple HTML Codegen</h1>
+          </div>
+        </div>
 
-      <div class="status" id="selection-status">
-        <span class="dot"></span>
-        <span>No selection yet.</span>
+        <!-- header right area removed to keep header minimal -->
       </div>
 
-      <div class="card">
-        <p class="card-title">Node Details</p>
-        <div class="properties-container" id="properties-display"></div>
-        <div class="card" style="margin-top: 12px; padding: 10px">
-          <p class="card-title">Full JSON</p>
-          <pre id="node-json"></pre>
+      <div class="main" style="grid-template-columns: 1fr">
+        <div class="panel" style="min-height: 640px; padding: 18px">
+          <div style="margin-bottom: 8px">
+            <p class="panel-title">Full JSON</p>
+          </div>
+          <pre id="node-json" aria-live="polite"></pre>
         </div>
       </div>
     </div>
 
     <script>
-      const statusElement = document.getElementById("selection-status");
       const jsonElement = document.getElementById("node-json");
-      const dotElement = statusElement.querySelector(".dot");
-      const textElement = statusElement.querySelector("span:nth-child(2)");
-
-      function setStatus(text, selected) {
-        textElement.textContent = text;
-        dotElement.style.opacity = selected ? "1" : "0.35";
-      }
 
       function setJsonDisplay(data) {
         if (!data) {
@@ -185,21 +246,15 @@
 
         jsonElement.innerHTML = highlighted;
       }
-
       window.onmessage = (event) => {
         const message = event.data.pluginMessage;
         if (!message) return;
 
         if (message.type === "selection-update") {
-          setStatus(
-            `Selected: ${message.data.name} (${message.data.type})`,
-            true
-          );
           setJsonDisplay(message.data);
         }
 
         if (message.type === "no-selection") {
-          setStatus("No node selected.", false);
           setJsonDisplay(null);
         }
       };
