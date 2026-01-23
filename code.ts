@@ -463,7 +463,7 @@ function pxToSize(px: number, prefix: string = "w"): string {
   return `${prefix}-[${px}px]`;
 }
 
-// Sanitize a node name to a safe CSS class (lowercase, dashes)
+// node name 
 function nameToClass(name: string, fallback: string): string {
   const trimmed = (name || "").trim();
   const slug = trimmed
