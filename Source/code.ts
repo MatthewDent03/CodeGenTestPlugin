@@ -430,7 +430,7 @@ const tailwindColorMap: Record<string, string> = {
 function findClosest(
   value: number,
   map: Record<number, string>,
-  tolerance: number = 2
+  tolerance: number = 2,
 ): string | null {
   const keys = Object.keys(map)
     .map(Number)
@@ -463,7 +463,7 @@ function pxToSize(px: number, prefix: string = "w"): string {
   return `${prefix}-[${px}px]`;
 }
 
-// node name 
+// node name
 function nameToClass(name: string, fallback: string): string {
   const trimmed = (name || "").trim();
   const slug = trimmed
@@ -483,15 +483,15 @@ function nodeSize(node: any): {
       node.layoutSizingHorizontal === "FILL"
         ? "fill"
         : node.layoutSizingHorizontal === "HUG"
-        ? null
-        : node.width;
+          ? null
+          : node.width;
 
     const height =
       node.layoutSizingVertical === "FILL"
         ? "fill"
         : node.layoutSizingVertical === "HUG"
-        ? null
-        : node.height;
+          ? null
+          : node.height;
 
     return { width, height };
   }
@@ -556,25 +556,25 @@ function paddingToTailwind(padding: any): string[] {
       if (top > 0) {
         const paddingTopClass = findClosest(top, spacingMap);
         classes.push(
-          paddingTopClass ? `pt-${paddingTopClass}` : `pt-[${top}px]`
+          paddingTopClass ? `pt-${paddingTopClass}` : `pt-[${top}px]`,
         );
       }
       if (right > 0) {
         const paddingRightClass = findClosest(right, spacingMap);
         classes.push(
-          paddingRightClass ? `pr-${paddingRightClass}` : `pr-[${right}px]`
+          paddingRightClass ? `pr-${paddingRightClass}` : `pr-[${right}px]`,
         );
       }
       if (bottom > 0) {
         const paddingBottomClass = findClosest(bottom, spacingMap);
         classes.push(
-          paddingBottomClass ? `pb-${paddingBottomClass}` : `pb-[${bottom}px]`
+          paddingBottomClass ? `pb-${paddingBottomClass}` : `pb-[${bottom}px]`,
         );
       }
       if (left > 0) {
         const paddingLeftClass = findClosest(left, spacingMap);
         classes.push(
-          paddingLeftClass ? `pl-${paddingLeftClass}` : `pl-[${left}px]`
+          paddingLeftClass ? `pl-${paddingLeftClass}` : `pl-[${left}px]`,
         );
       }
     }
@@ -701,7 +701,7 @@ function colorDistance(hex1: string, hex2: string): number {
 
 function colorToTailwind(
   hex: string,
-  type: "bg" | "text" | "border" = "text"
+  type: "bg" | "text" | "border" = "text",
 ): string {
   const colorMap = tailwindColorMap;
 
@@ -798,7 +798,7 @@ function getWrappingClasses(node: SceneNode): string[] {
 
 function layoutModeToTailwind(
   layoutMode: string,
-  itemSpacing: number
+  itemSpacing: number,
 ): string[] {
   const classes: string[] = ["flex"];
   if (layoutMode === "HORIZONTAL") {
@@ -817,7 +817,7 @@ function layoutModeToTailwind(
 // === PLUGIN UI (FIGMA MODE) ===
 // Open the panel and stream basic selection info to the iframe.
 if (figma.editorType === "figma") {
-  figma.showUI(__uiFiles__.main, { width: 320, height: 400 });
+  figma.showUI(__uiFiles__.main, { width: 420, height: 740 });
 
   figma.on("selectionchange", () => {
     const node = figma.currentPage.selection[0];
@@ -828,10 +828,14 @@ if (figma.editorType === "figma") {
     }
 
     const props = extractNodeProperties(node);
+    const html = convertNode(node, 0);
+    const tailwind = convertNodeTailwind(node, 0);
 
     figma.ui.postMessage({
       type: "selection-update",
       data: props,
+      html,
+      tailwind,
     });
   });
 }
@@ -862,7 +866,7 @@ function getFillColor(node: SceneNode): string | null {
 // === STROKE HELPERS ===
 // solid stroke as { color, width, opacity } or null
 function getStroke(
-  node: SceneNode
+  node: SceneNode,
 ): { color: string; width: number; opacity: number; position?: string } | null {
   if (
     "strokes" in node &&
@@ -1064,13 +1068,13 @@ function getShadowCSS(node: SceneNode): string {
       const spread = effect.spread || 0;
       const color = effect.color
         ? `rgba(${Math.round(effect.color.r * 255)}, ${Math.round(
-            effect.color.g * 255
+            effect.color.g * 255,
           )}, ${Math.round(effect.color.b * 255)}, ${effect.color.a || 1})`
         : "rgba(0,0,0,0.5)";
       const inset = effect.type === "INNER_SHADOW" ? "inset " : "";
 
       shadows.push(
-        `${inset}${offsetX}px ${offsetY}px ${radius}px ${spread}px ${color}`
+        `${inset}${offsetX}px ${offsetY}px ${radius}px ${spread}px ${color}`,
       );
     }
   }
@@ -1118,7 +1122,7 @@ function getTag(node: SceneNode): string {
 function convertNode(
   node: SceneNode,
   level: number = 0,
-  parent?: SceneNode
+  parent?: SceneNode,
 ): string {
   const htmlTag = getTag(node);
 
@@ -1132,7 +1136,7 @@ function convertNode(
 
   return `${indent(level)}<${htmlTag} style="${buildCSS(
     node,
-    parent
+    parent,
   )}"></${htmlTag}>\n`;
 }
 
@@ -1140,7 +1144,7 @@ function convertTextNodeHTML(
   node: TextNode,
   htmlTag: string,
   level: number,
-  parent?: SceneNode
+  parent?: SceneNode,
 ): string {
   let cssText = `width:${node.width}px; height:${node.height}px;`;
 
@@ -1211,7 +1215,7 @@ function convertFrameHTML(
   node: FrameNode,
   htmlTag: string,
   level: number,
-  parent?: SceneNode
+  parent?: SceneNode,
 ): string {
   let cssText = `position:absolute; width:${node.width}px; height:${node.height}px; left:${node.x}px; top:${node.y}px;`;
 
@@ -1233,9 +1237,9 @@ function convertFrameHTML(
   }
 
   return `${indent(
-    level
+    level,
   )}<${htmlTag} class="frame" style="${cssText}">\n${childrenHtml}${indent(
-    level
+    level,
   )}</${htmlTag}>\n`;
 }
 
@@ -1244,7 +1248,7 @@ function convertFrameHTML(
 function convertNodeTailwind(
   node: SceneNode,
   level: number = 0,
-  parent?: SceneNode
+  parent?: SceneNode,
 ): string {
   const htmlTag = getTag(node);
 
@@ -1263,11 +1267,11 @@ function convertShapeTailwind(
   node: SceneNode,
   htmlTag: string,
   level: number,
-  parent?: SceneNode
+  parent?: SceneNode,
 ): string {
   const classList: string[] = [];
 
-  // layer name as class 
+  // layer name as class
   if (node.name) {
     classList.push(nameToClass(node.name, `node-${node.id}`));
   }
@@ -1319,7 +1323,7 @@ function convertShapeTailwind(
       else classList.push(`ring-[${stroke.width}px]`);
       const ringColor = colorToTailwind(stroke.color, "border").replace(
         /^border-/,
-        "ring-"
+        "ring-",
       );
       classList.push(ringColor);
       if (stroke.opacity < 1) {
@@ -1359,7 +1363,7 @@ function convertTextNodeTailwind(
   node: TextNode,
   htmlTag: string,
   level: number,
-  parent?: SceneNode
+  parent?: SceneNode,
 ) {
   const textClasses: string[] = [];
 
@@ -1411,7 +1415,7 @@ function convertTextNodeTailwind(
       const fontSize = typeof node.fontSize === "number" ? node.fontSize : 16;
       const letterSpacingClass = pxToLetterSpacing(
         letterSpacing.value,
-        fontSize
+        fontSize,
       );
       if (letterSpacingClass) textClasses.push(letterSpacingClass);
     }
@@ -1447,7 +1451,7 @@ function convertFrameTailwind(
   node: FrameNode,
   htmlTag: string,
   level: number,
-  parent?: SceneNode
+  parent?: SceneNode,
 ): string {
   const classList: string[] = [];
 
@@ -1495,7 +1499,7 @@ function convertFrameTailwind(
       else classList.push(`ring-[${stroke.width}px]`);
       const ringColor = colorToTailwind(stroke.color, "border").replace(
         /^border-/,
-        "ring-"
+        "ring-",
       );
       classList.push(ringColor);
       if (stroke.opacity < 1) {

@@ -1,262 +1,485 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Node Properties Viewer</title>
-
+    <title>Simple HTML Codegen</title>
     <style>
+      /* === CSS Variables & Reset === */
       :root {
         --bg: #0b0b0d;
         --panel: #0f1113;
+        --text: #e6eef6;
         --muted: #9aa0a6;
         --accent: #7dd3fc;
-        --card: #0f1214;
-        --border: rgba(255, 255, 255, 0.04);
-        --glass: linear-gradient(
-          180deg,
-          rgba(255, 255, 255, 0.02),
-          rgba(255, 255, 255, 0.01)
-        );
+        --border: rgba(255, 255, 255, 0.06);
       }
 
       * {
         box-sizing: border-box;
       }
-      html,
-      body {
-        height: 100%;
-      }
+
+      /* === Base Styles === */
       body {
         margin: 0;
-        padding: 18px;
-        min-height: 100vh;
+        padding: 20px;
         background: var(--bg);
-        color: #e6eef6;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-          Roboto, "Helvetica Neue", Arial;
-        display: flex;
-        align-items: flex-start;
-        justify-content: center;
+        color: var(--text);
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Arial;
       }
 
-      .shell {
-        width: 100%;
-        max-width: 780px;
+      /* === Panel Layout === */
+      .panel {
         background: var(--panel);
-        border-radius: 12px;
-        padding: 14px;
         border: 1px solid var(--border);
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+        border-radius: 12px;
+        padding: 18px;
+        margin-bottom: 20px;
       }
 
-      .header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-      }
+      /* === Typography === */
       .title {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      .logo {
-        width: 36px;
-        height: 36px;
-        border-radius: 8px;
-        background: var(--accent);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #042b35;
-        font-weight: 700;
-      }
-      h1 {
-        font-size: 14px;
-        margin: 0;
-      }
-      .subtitle {
-        font-size: 11px;
-        color: var(--muted);
-        margin-top: 2px;
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0 0 10px;
       }
 
-      .status {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 8px 10px;
+      .subtitle {
         font-size: 13px;
         color: var(--muted);
-        border-radius: 8px;
-        background: var(--card);
-        border: 1px solid var(--border);
-      }
-      .status .dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: #334155;
-        box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.08);
+        margin: 0 0 12px;
       }
 
-      .main {
-        display: grid;
-        grid-template-columns: 1fr 360px;
-        gap: 12px;
-        margin-top: 12px;
-      }
-
-      .panel {
-        background: var(--card);
-        padding: 12px;
-        border-radius: 10px;
-        border: 1px solid var(--border);
-      }
-      .panel .panel-title {
-        font-size: 12px;
-        color: var(--muted);
-        margin: 0 0 8px;
-      }
-
+      /* === Properties List === */
       .properties {
         display: flex;
         flex-direction: column;
         gap: 8px;
-      }
-      .prop {
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-        padding: 8px;
-        border-radius: 8px;
-        background: linear-gradient(
-          180deg,
-          rgba(255, 255, 255, 0.01),
-          transparent
-        );
-        border: 1px solid rgba(255, 255, 255, 0.02);
-      }
-      .prop .k {
-        font-size: 12px;
-        color: var(--muted);
-        min-width: 120px;
-      }
-      .prop .v {
-        font-size: 13px;
-        color: #dbeafe;
-        word-break: break-all;
-      }
-
-      pre {
-        margin: 0;
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 12px;
-        line-height: 1.6;
-        padding: 10px;
-        border-radius: 8px;
-        background: #060608;
-        color: #cfe9ff;
-        border: 1px solid rgba(255, 255, 255, 0.03);
-        max-height: 300px;
+        max-height: 260px;
         overflow: auto;
       }
 
-      .controls {
+      /* Individual property row with key-value pair */
+      .property-row {
         display: flex;
-        gap: 8px;
-        align-items: center;
-      }
-      .btn {
-        background: transparent;
+        gap: 10px;
+        padding: 8px 10px;
         border: 1px solid rgba(255, 255, 255, 0.04);
-        color: var(--accent);
-        padding: 6px 8px;
         border-radius: 8px;
-        font-size: 12px;
+      }
+
+      .property-key {
+        min-width: 130px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .property-value {
+        font-size: 13px;
+        word-break: break-word;
+      }
+
+      /* === Tabs & Buttons === */
+      .tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      /* Reusable button styling for tabs and actions */
+      .button {
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text);
         cursor: pointer;
+        font-size: 13px;
       }
-      .btn.ghost {
+
+      .button.active {
+        border-color: rgba(125, 211, 252, 0.5);
+        color: var(--accent);
+      }
+
+      .button.muted {
         color: var(--muted);
       }
 
-      .small-muted {
+      /* === Code Output Display === */
+      pre {
+        margin: 0;
+        padding: 14px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        background: #060608;
+        min-height: 320px;
+        max-height: 480px;
+        overflow: auto;
+        white-space: pre;
+        font-size: 13px;
+        line-height: 1.8;
+        tab-size: 2;
+      }
+
+      /* Action buttons container (Copy, Download) */
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      /* === Color Swatches === */
+      /* Container for color chips */
+      .swatches {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      /* Individual color swatch item */
+      .swatch {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 10px;
+        padding: 6px 10px;
+        background: rgba(255, 255, 255, 0.01);
+      }
+
+      .swatch-color {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .swatch-labels {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .swatch-name {
         font-size: 12px;
         color: var(--muted);
       }
 
-      /* scrollbar */
-      pre::-webkit-scrollbar,
-      .panel::-webkit-scrollbar {
-        height: 10px;
-        width: 10px;
-      }
-      pre::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.06);
-        border-radius: 6px;
-      }
-
-      @media (max-width: 760px) {
-        .main {
-          grid-template-columns: 1fr;
-        }
+      .swatch-value {
+        font-size: 12px;
+        color: var(--text);
       }
     </style>
   </head>
-
   <body>
-    <div class="shell">
-      <div class="header">
-        <div class="title">
-          <div class="logo">&lt;/&gt;</div>
-          <div>
-            <h1>Simple HTML Codegen</h1>
-          </div>
-        </div>
+    <div class="panel">
+      <p class="title">Simple HTML Codegen</p>
+      <p class="subtitle">Selected Frame</p>
+      <div id="frame-name">No selection</div>
+    </div>
 
-        <!-- header right area removed to keep header minimal -->
+    <div class="panel">
+      <p class="subtitle">Editable Fields</p>
+      <div id="properties" class="properties" aria-live="polite"></div>
+    </div>
+
+    <div class="panel">
+      <p class="subtitle">Color Swatches</p>
+      <div id="color-swatches" class="swatches" aria-live="polite"></div>
+    </div>
+
+    <div class="panel">
+      <p class="subtitle">Live Code Preview</p>
+      <div class="tabs">
+        <button class="button active" id="tab-html">HTML + CSS</button>
+        <button class="button" id="tab-tailwind">HTML + Tailwind</button>
       </div>
-
-      <div class="main" style="grid-template-columns: 1fr">
-        <div class="panel" style="min-height: 640px; padding: 18px">
-          <div style="margin-bottom: 8px">
-            <p class="panel-title">Full JSON</p>
-          </div>
-          <pre id="node-json" aria-live="polite"></pre>
-        </div>
+      <pre id="code-output" aria-live="polite"></pre>
+      <div class="actions">
+        <button class="button" id="copy-btn">Copy</button>
+        <button class="button muted" id="download-btn">Download</button>
       </div>
     </div>
 
     <script>
-      const jsonElement = document.getElementById("node-json");
+      /* === DOM Elements === */
+      const frameName = document.getElementById("frame-name");
+      const properties = document.getElementById("properties");
+      const colorSwatches = document.getElementById("color-swatches");
+      const codeOutput = document.getElementById("code-output");
+      const tabHtml = document.getElementById("tab-html");
+      const tabTailwind = document.getElementById("tab-tailwind");
+      const copyButton = document.getElementById("copy-btn");
+      const downloadButton = document.getElementById("download-btn");
 
-      function setJsonDisplay(data) {
-        if (!data) {
-          jsonElement.textContent = "";
+      /* === App State === */
+      /* Tracks current mode (html/tailwind) and generated code */
+      const appState = {
+        mode: "html",
+        html: "",
+        tailwind: "",
+      };
+
+      /* === Property Order === */
+      /* Defines preferred order for displaying properties  */
+      const propertyOrder = [
+        "id",
+        "name",
+        "type",
+        "width",
+        "height",
+        "x",
+        "y",
+        "rotation",
+        "layoutMode",
+        "itemSpacing",
+        "gap",
+        "padding",
+        "cornerRadius",
+        "fill",
+        "stroke",
+        "strokeWeight",
+        "strokeAlign",
+        "layoutGrow",
+        "layoutAlign",
+        "fontSize",
+        "fontName",
+        "characters",
+        "textAlignHorizontal",
+        "fills",
+        "strokes",
+      ];
+
+      /* === Utility Functions === */
+      /* Convert any value to displayable string, handling objects and nulls */
+      function toDisplayValue(value) {
+        if (value === undefined || value === null) return "—";
+        if (typeof value === "string" || typeof value === "number") {
+          return String(value);
+        }
+        return JSON.stringify(value);
+      }
+
+      /* Return the current code based on selected mode */
+      function getCodeForMode() {
+        return appState.mode === "html" ? appState.html : appState.tailwind;
+      }
+
+      /* === Render Functions === */
+      /* Display all node properties in the Editable Fields section */
+      function renderProperties(data) {
+        properties.innerHTML = "";
+        if (!data) return;
+
+        const allKeys = Object.keys(data).filter((key) => key !== "children");
+        const orderedKeys = [
+          ...propertyOrder.filter((key) => allKeys.includes(key)),
+          ...allKeys.filter((key) => !propertyOrder.includes(key)),
+        ];
+
+        orderedKeys.forEach((key) => {
+          const row = document.createElement("div");
+          row.className = "property-row";
+
+          const keyLabel = document.createElement("div");
+          keyLabel.className = "property-key";
+          keyLabel.textContent = key;
+
+          const valueLabel = document.createElement("div");
+          valueLabel.className = "property-value";
+          valueLabel.textContent = toDisplayValue(data[key]);
+
+          row.appendChild(keyLabel);
+          row.appendChild(valueLabel);
+          properties.appendChild(row);
+        });
+      }
+
+      /* === Color Conversion === */
+      /* Convert RGB object (0-1 values) to hex string (#RRGGBB) */
+      /* Example: {r: 1, g: 0.5, b: 0} becomes "#ff7f00" */
+      function rgbToHex(color) {
+        if (!color) return null;
+        const r = Math.round(color.r * 255)
+          .toString(16)
+          .padStart(2, "0");
+        const g = Math.round(color.g * 255)
+          .toString(16)
+          .padStart(2, "0");
+        const b = Math.round(color.b * 255)
+          .toString(16)
+          .padStart(2, "0");
+        return `#${r}${g}${b}`;
+      }
+
+      function renderSwatches(data) {
+        colorSwatches.innerHTML = "";
+        if (!data) return;
+
+        const swatches = [];
+        const seen = new Set();
+
+        /* Helper to add unique color swatch (avoids duplicates) */
+        function addSwatch(name, hex) {
+          if (!hex || seen.has(hex)) return;
+          seen.add(hex);
+          swatches.push({ name, value: hex });
+        }
+
+        /* Rechecks node tree to collect all fill/stroke colors */
+        /* Checks fills/strokes arrays first, then falls back to single fill/stroke */
+        function collectNodeColors(node) {
+          if (!node) return;
+
+          if (Array.isArray(node.fills) && node.fills.length > 0) {
+            node.fills.forEach((fill, index) => {
+              if (fill && fill.type === "SOLID" && fill.color) {
+                const hex = rgbToHex(fill.color);
+                addSwatch(`Fill ${index + 1}`, hex);
+              }
+            });
+          } else if (node.fill) {
+            addSwatch("Fill", node.fill);
+          }
+
+          if (Array.isArray(node.strokes) && node.strokes.length > 0) {
+            node.strokes.forEach((stroke, index) => {
+              if (stroke && stroke.type === "SOLID" && stroke.color) {
+                const hex = rgbToHex(stroke.color);
+                addSwatch(`Stroke ${index + 1}`, hex);
+              }
+            });
+          } else if (node.stroke && node.stroke.color) {
+            addSwatch("Stroke", node.stroke.color);
+          }
+
+          if (Array.isArray(node.children)) {
+            node.children.forEach((child) => collectNodeColors(child));
+          }
+        }
+
+        collectNodeColors(data);
+
+        if (swatches.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "property-value";
+          empty.textContent = "No colors found";
+          colorSwatches.appendChild(empty);
           return;
         }
 
-        const jsonString = JSON.stringify(data, null, 2);
-        const highlighted = jsonString
-          .replace(/"([^"]+)":\s*/g, '<span class="json-key">"$1":</span> ')
-          .replace(/:\s*"([^"]*)"/g, ': <span class="json-string">"$1"</span>')
-          .replace(/:\s*(\d+\.?\d*)/g, ': <span class="json-number">$1</span>')
-          .replace(/:\s*(true|false)/g, ': <span class="json-value">$1</span>')
-          .replace(/:\s*null/g, ': <span class="json-null">null</span>');
+        swatches.forEach((swatch) => {
+          const item = document.createElement("div");
+          item.className = "swatch";
 
-        jsonElement.innerHTML = highlighted;
+          const color = document.createElement("div");
+          color.className = "swatch-color";
+          color.style.background = swatch.value;
+
+          const labels = document.createElement("div");
+          labels.className = "swatch-labels";
+
+          const name = document.createElement("div");
+          name.className = "swatch-name";
+          name.textContent = swatch.name;
+
+          const value = document.createElement("div");
+          value.className = "swatch-value";
+          value.textContent = swatch.value;
+
+          labels.appendChild(name);
+          labels.appendChild(value);
+          item.appendChild(color);
+          item.appendChild(labels);
+          colorSwatches.appendChild(item);
+        });
       }
+
+      /* Display code based on current mode (html/tailwind) */
+      function renderCode() {
+        codeOutput.textContent = getCodeForMode();
+      }
+
+      /* Switch between HTML+CSS and HTML+Tailwind modes */
+      function setMode(mode) {
+        appState.mode = mode;
+        tabHtml.classList.toggle("active", mode === "html");
+        tabTailwind.classList.toggle("active", mode === "tailwind");
+        renderCode();
+      }
+
+      /* Copy current code to clipboard using textarea + execCommand */
+      /* Shows temporary "Copied" message on button */
+      function copyCode() {
+        const text = getCodeForMode();
+        if (!text) return;
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+
+        copyButton.textContent = "Copied";
+        setTimeout(() => {
+          copyButton.textContent = "Copy";
+        }, 1200);
+      }
+
+      /* Download current code as HTML file based on mode */
+      function downloadCode() {
+        const text = getCodeForMode();
+        const blob = new Blob([text], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download =
+          appState.mode === "html" ? "code.html" : "tailwind.html";
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function updateSelection(message) {
+        frameName.textContent = message.data?.name || "Unnamed frame";
+        renderProperties(message.data);
+        renderSwatches(message.data);
+        appState.html = message.html || "";
+        appState.tailwind = message.tailwind || "";
+        renderCode();
+      }
+
+      function clearSelection() {
+        frameName.textContent = "No selection";
+        properties.innerHTML = "";
+        colorSwatches.innerHTML = "";
+        appState.html = "";
+        appState.tailwind = "";
+        renderCode();
+      }
+
+      /* === Event Handlers === */
+      tabHtml.addEventListener("click", () => setMode("html"));
+      tabTailwind.addEventListener("click", () => setMode("tailwind"));
+      copyButton.addEventListener("click", copyCode);
+      downloadButton.addEventListener("click", downloadCode);
+
+      /* === Message Handling === */
+      /* Receive updates from plugin code when selection changes */
       window.onmessage = (event) => {
         const message = event.data.pluginMessage;
         if (!message) return;
 
-        if (message.type === "selection-update") {
-          setJsonDisplay(message.data);
-        }
-
-        if (message.type === "no-selection") {
-          setJsonDisplay(null);
-        }
+        if (message.type === "selection-update") updateSelection(message);
+        if (message.type === "no-selection") clearSelection();
       };
     </script>
   </body>
