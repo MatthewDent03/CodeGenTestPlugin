@@ -817,7 +817,17 @@ function layoutModeToTailwind(
 // === PLUGIN UI (FIGMA MODE) ===
 // Open the panel and stream basic selection info to the iframe.
 if (figma.editorType === "figma") {
-  figma.showUI(__uiFiles__.main, { width: 420, height: 740 });
+  const compactSize = { width: 380, height: 500 };
+  const popoutSize = { width: 760, height: 720 };
+
+  figma.showUI(__uiFiles__.main, compactSize);
+
+  figma.ui.onmessage = (message) => {
+    if (message?.type === "toggle-popout") {
+      const nextSize = message.poppedOut ? popoutSize : compactSize;
+      figma.ui.resize(nextSize.width, nextSize.height);
+    }
+  };
 
   figma.on("selectionchange", () => {
     const node = figma.currentPage.selection[0];

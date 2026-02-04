@@ -4,16 +4,6 @@
     <meta charset="utf-8" />
     <title>Simple HTML Codegen</title>
     <style>
-      /* === CSS Variables & Reset === */
-      :root {
-        --bg: #0b0b0d;
-        --panel: #0f1113;
-        --text: #e6eef6;
-        --muted: #9aa0a6;
-        --accent: #7dd3fc;
-        --border: rgba(255, 255, 255, 0.06);
-      }
-
       * {
         box-sizing: border-box;
       }
@@ -21,9 +11,9 @@
       /* === Base Styles === */
       body {
         margin: 0;
-        padding: 20px;
-        background: var(--bg);
-        color: var(--text);
+        padding: 16px;
+        background: #f4f6fb;
+        color: #1f2937;
         font-family:
           Inter,
           system-ui,
@@ -34,47 +24,66 @@
 
       /* === Panel Layout === */
       .panel {
-        background: var(--panel);
-        border: 1px solid var(--border);
-        border-radius: 12px;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
         padding: 18px;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 6px;
+      }
+
+      .panel-title-group {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .popout-btn {
+        padding: 6px 10px;
+        font-size: 12px;
       }
 
       /* === Typography === */
       .title {
-        font-size: 16px;
-        font-weight: 600;
+        font-size: 18px;
+        font-weight: 650;
         margin: 0 0 10px;
       }
 
       .subtitle {
-        font-size: 13px;
-        color: var(--muted);
-        margin: 0 0 12px;
+        font-size: 12.5px;
+        color: #6b7280;
+        margin: 0 0 10px;
       }
 
       /* === Properties List === */
       .properties {
         display: flex;
         flex-direction: column;
-        gap: 8px;
-        max-height: 260px;
-        overflow: auto;
+        gap: 12px;
       }
 
-      /* Individual property row with key-value pair */
+      /* === Individual property row with key-value pair === */
       .property-row {
         display: flex;
-        gap: 10px;
-        padding: 8px 10px;
-        border: 1px solid rgba(255, 255, 255, 0.04);
-        border-radius: 8px;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #f9fafb;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       }
 
       .property-key {
         min-width: 130px;
-        color: var(--muted);
+        color: #6b7280;
         font-size: 13px;
       }
 
@@ -86,124 +95,193 @@
       /* === Tabs & Buttons === */
       .tabs {
         display: flex;
-        gap: 10px;
-        margin-bottom: 10px;
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
       }
 
-      /* Reusable button styling for tabs and actions */
+      /* === button styling === */
       .button {
         padding: 8px 12px;
-        border-radius: 8px;
-        border: 1px solid var(--border);
-        background: transparent;
-        color: var(--text);
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        background: #ffffff;
+        color: #1f2937;
         cursor: pointer;
         font-size: 13px;
+        transition:
+          background 0.2s ease,
+          border-color 0.2s ease;
+      }
+
+      .button:hover {
+        background: #f3f4f6;
       }
 
       .button.active {
-        border-color: rgba(125, 211, 252, 0.5);
-        color: var(--accent);
+        border-color: #2563eb;
+        color: #2563eb;
+        background: rgba(37, 99, 235, 0.1);
       }
 
       .button.muted {
-        color: var(--muted);
+        color: #6b7280;
       }
 
       /* === Code Output Display === */
       pre {
         margin: 0;
-        padding: 14px;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.04);
-        background: #060608;
-        min-height: 320px;
-        max-height: 480px;
-        overflow: auto;
-        white-space: pre;
+        padding: 14px 16px;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        background: #f9fafb;
+        overflow: visible;
+        white-space: pre-wrap;
+        word-break: break-word;
         font-size: 13px;
-        line-height: 1.8;
+        line-height: 20px;
         tab-size: 2;
+        color: #1f2937;
       }
 
-      /* Action buttons container (Copy, Download) */
+      /* === buttons container (Copy, Download) === */
       .actions {
         display: flex;
         justify-content: flex-end;
-        gap: 10px;
-        margin-top: 10px;
+        gap: 12px;
+        margin-top: 12px;
       }
 
       /* === Color Swatches === */
-      /* Container for color chips */
+      /* === Container for color chips === */
       .swatches {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
       }
 
-      /* Individual color swatch item */
+      /* === Individual color swatch item === */
       .swatch {
         display: flex;
         align-items: center;
         gap: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.06);
+        border: 1px solid #e5e7eb;
         border-radius: 10px;
-        padding: 6px 10px;
-        background: rgba(255, 255, 255, 0.01);
+        padding: 8px 10px;
+        background: #f9fafb;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       }
 
       .swatch-color {
         width: 28px;
         height: 28px;
         border-radius: 50%;
-        border: 1px solid rgba(255, 255, 255, 0.12);
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
       }
 
       .swatch-labels {
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 4px;
       }
 
       .swatch-name {
         font-size: 12px;
-        color: var(--muted);
+        color: #6b7280;
       }
 
       .swatch-value {
         font-size: 12px;
-        color: var(--text);
+        color: #1f2937;
+      }
+
+      /* === Collapsible (W3Schools) === */
+      .collapsible {
+        background-color: transparent;
+        color: #1f2937;
+        cursor: pointer;
+        padding: 12px 14px;
+        width: 100%;
+        border: none;
+        text-align: left;
+        outline: none;
+        font-size: 14px;
+        font-weight: 600;
+        transition: 0.4s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 10px;
+      }
+
+      .active,
+      .collapsible:hover {
+        background-color: #f3f4f6;
+      }
+
+      .collapsible:after {
+        content: "\002B";
+        color: #6b7280;
+        font-weight: bold;
+        margin-left: auto;
+      }
+
+      .active:after {
+        content: "\2212";
+      }
+
+      .content {
+        padding: 0 14px;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.2s ease-out;
+        background-color: transparent;
+      }
+
+      .content.open {
+        padding: 8px 14px 12px;
       }
     </style>
   </head>
   <body>
     <div class="panel">
-      <p class="title">Simple HTML Codegen</p>
-      <p class="subtitle">Selected Frame</p>
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <p class="title">Simple HTML Codegen</p>
+          <p class="subtitle">Selected Frame</p>
+        </div>
+        <button class="button popout-btn" id="popout-btn">Pop out</button>
+      </div>
       <div id="frame-name">No selection</div>
     </div>
 
     <div class="panel">
-      <p class="subtitle">Editable Fields</p>
-      <div id="properties" class="properties" aria-live="polite"></div>
-    </div>
-
-    <div class="panel">
-      <p class="subtitle">Color Swatches</p>
-      <div id="color-swatches" class="swatches" aria-live="polite"></div>
-    </div>
-
-    <div class="panel">
-      <p class="subtitle">Live Code Preview</p>
-      <div class="tabs">
-        <button class="button active" id="tab-html">HTML + CSS</button>
-        <button class="button" id="tab-tailwind">HTML + Tailwind</button>
+      <button type="button" class="collapsible">Editable Fields</button>
+      <div class="content">
+        <div id="properties" class="properties" aria-live="polite"></div>
       </div>
-      <pre id="code-output" aria-live="polite"></pre>
-      <div class="actions">
-        <button class="button" id="copy-btn">Copy</button>
-        <button class="button muted" id="download-btn">Download</button>
+    </div>
+
+    <div class="panel">
+      <button type="button" class="collapsible">Color Swatches</button>
+      <div class="content">
+        <div id="color-swatches" class="swatches" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <button type="button" class="collapsible">Live Code Preview</button>
+      <div class="content">
+        <div class="tabs">
+          <button class="button active" id="tab-html">HTML + CSS</button>
+          <button class="button" id="tab-tailwind">HTML + Tailwind</button>
+        </div>
+        <pre id="code-output" aria-live="polite"></pre>
+        <div class="actions">
+          <button class="button" id="copy-btn">Copy</button>
+          <button class="button muted" id="download-btn">Download</button>
+        </div>
       </div>
     </div>
 
@@ -217,6 +295,7 @@
       const tabTailwind = document.getElementById("tab-tailwind");
       const copyButton = document.getElementById("copy-btn");
       const downloadButton = document.getElementById("download-btn");
+      const popoutButton = document.getElementById("popout-btn");
 
       /* === App State === */
       /* Tracks current mode (html/tailwind) and generated code */
@@ -225,6 +304,8 @@
         html: "",
         tailwind: "",
       };
+
+      let isPoppedOut = false;
 
       /* === Property Order === */
       /* Defines preferred order for displaying properties  */
@@ -406,6 +487,16 @@
         codeOutput.textContent = getCodeForMode();
       }
 
+      /* Recalculate open collapsible heights after content updates */
+      function refreshOpenCollapsibles() {
+        const openButtons = document.querySelectorAll(".collapsible.active");
+        openButtons.forEach((button) => {
+          const content = button.nextElementSibling;
+          if (!content) return;
+          content.style.maxHeight = content.scrollHeight + "px";
+        });
+      }
+
       /* Switch between HTML+CSS and HTML+Tailwind modes */
       function setMode(mode) {
         appState.mode = mode;
@@ -455,6 +546,7 @@
         appState.html = message.html || "";
         appState.tailwind = message.tailwind || "";
         renderCode();
+        requestAnimationFrame(refreshOpenCollapsibles);
       }
 
       function clearSelection() {
@@ -464,6 +556,7 @@
         appState.html = "";
         appState.tailwind = "";
         renderCode();
+        requestAnimationFrame(refreshOpenCollapsibles);
       }
 
       /* === Event Handlers === */
@@ -471,9 +564,35 @@
       tabTailwind.addEventListener("click", () => setMode("tailwind"));
       copyButton.addEventListener("click", copyCode);
       downloadButton.addEventListener("click", downloadCode);
+      popoutButton.addEventListener("click", () => {
+        isPoppedOut = !isPoppedOut;
+        popoutButton.textContent = isPoppedOut ? "Dock" : "Pop out";
+        parent.postMessage(
+          { pluginMessage: { type: "toggle-popout", poppedOut: isPoppedOut } },
+          "*",
+        );
+      });
+
+      /* === Collapsible Functionality (W3Schools pattern) === */
+      var coll = document.getElementsByClassName("collapsible");
+      var i;
+
+      for (i = 0; i < coll.length; i++) {
+        coll[i].addEventListener("click", function () {
+          this.classList.toggle("active");
+          var content = this.nextElementSibling;
+          if (content.style.maxHeight) {
+            content.classList.remove("open");
+            content.style.maxHeight = null;
+          } else {
+            content.classList.add("open");
+            content.style.maxHeight = content.scrollHeight + "px";
+          }
+        });
+      }
 
       /* === Message Handling === */
-      /* Receive updates from plugin code when selection changes */
+      /* Receives updates from plugin code when selection changes */
       window.onmessage = (event) => {
         const message = event.data.pluginMessage;
         if (!message) return;
