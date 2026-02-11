@@ -73,6 +73,7 @@
       /* === Individual property row with key-value pair === */
       .property-row {
         display: flex;
+        align-items: center;
         gap: 12px;
         padding: 10px 12px;
         border: 1px solid #e5e7eb;
@@ -90,6 +91,21 @@
       .property-value {
         font-size: 13px;
         word-break: break-word;
+      }
+
+      .property-input {
+        width: 100%;
+        padding: 6px 8px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        background: #ffffff;
+        color: #1f2937;
+        font-size: 13px;
+      }
+
+      .property-input:focus {
+        outline: none;
+        border-color: #2563eb;
       }
 
       /* === Tabs & Buttons === */
@@ -306,6 +322,9 @@
       };
 
       let isPoppedOut = false;
+      let currentNodeId = null;
+
+      const editableKeys = new Set(["x", "y", "width", "height"]);
 
       /* === Property Order === */
       /* Defines preferred order for displaying properties  */
@@ -372,12 +391,40 @@
           keyLabel.className = "property-key";
           keyLabel.textContent = key;
 
-          const valueLabel = document.createElement("div");
-          valueLabel.className = "property-value";
-          valueLabel.textContent = toDisplayValue(data[key]);
+          let valueEl;
+          if (editableKeys.has(key) && typeof data[key] === "number") {
+            const input = document.createElement("input");
+            input.type = "number";
+            input.className = "property-input";
+            input.value = String(data[key]);
+            input.addEventListener("change", () => {
+              const nextValue = Number(input.value);
+              if (!Number.isFinite(nextValue) || currentNodeId === null) {
+                input.value = String(data[key]);
+                return;
+              }
+              parent.postMessage(
+                {
+                  pluginMessage: {
+                    type: "update-node",
+                    nodeId: currentNodeId,
+                    property: key,
+                    value: nextValue,
+                  },
+                },
+                "*",
+              );
+            });
+            valueEl = input;
+          } else {
+            const valueLabel = document.createElement("div");
+            valueLabel.className = "property-value";
+            valueLabel.textContent = toDisplayValue(data[key]);
+            valueEl = valueLabel;
+          }
 
           row.appendChild(keyLabel);
-          row.appendChild(valueLabel);
+          row.appendChild(valueEl);
           properties.appendChild(row);
         });
       }
@@ -540,6 +587,7 @@
       }
 
       function updateSelection(message) {
+        currentNodeId = message.data?.id || null;
         frameName.textContent = message.data?.name || "Unnamed frame";
         renderProperties(message.data);
         renderSwatches(message.data);
@@ -550,6 +598,7 @@
       }
 
       function clearSelection() {
+        currentNodeId = null;
         frameName.textContent = "No selection";
         properties.innerHTML = "";
         colorSwatches.innerHTML = "";

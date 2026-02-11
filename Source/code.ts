@@ -822,10 +822,56 @@ if (figma.editorType === "figma") {
 
   figma.showUI(__uiFiles__.main, compactSize);
 
-  figma.ui.onmessage = (message) => {
-    if (message?.type === "toggle-popout") {
+  function pushSelectionUpdate(node: SceneNode) {
+    const props = extractNodeProperties(node);
+    const html = convertNode(node, 0);
+    const tailwind = convertNodeTailwind(node, 0);
+    figma.ui.postMessage({
+      type: "selection-update",
+      data: props,
+      html,
+      tailwind,
+    });
+  }
+
+  figma.ui.onmessage = async (message) => {
+    if (!message || !message.type) return;
+
+    if (message.type === "toggle-popout") {
       const nextSize = message.poppedOut ? popoutSize : compactSize;
       figma.ui.resize(nextSize.width, nextSize.height);
+      return;
+    }
+
+    if (message.type === "update-node") {
+      const nodeId = message.nodeId as string | undefined;
+      const property = message.property as string | undefined;
+      const value = Number(message.value);
+
+      if (!nodeId || !property || !Number.isFinite(value)) return;
+
+      const node = await figma.getNodeByIdAsync(nodeId);
+      if (!node || node.type === "DOCUMENT" || node.type === "PAGE") return;
+
+      if ("locked" in node && node.locked) {
+        figma.notify("Node is locked");
+        return;
+      }
+
+      if (property === "x" && "x" in node) {
+        node.x = value;
+      } else if (property === "y" && "y" in node) {
+        node.y = value;
+      } else if (property === "width" && "resize" in node) {
+        const height = "height" in node ? node.height : 0;
+        if (value > 0 && height > 0) (node as any).resize(value, height);
+      } else if (property === "height" && "resize" in node) {
+        const width = "width" in node ? node.width : 0;
+        if (value > 0 && width > 0) (node as any).resize(width, value);
+      }
+
+      pushSelectionUpdate(node as SceneNode);
+      return;
     }
   };
 
@@ -837,16 +883,7 @@ if (figma.editorType === "figma") {
       return;
     }
 
-    const props = extractNodeProperties(node);
-    const html = convertNode(node, 0);
-    const tailwind = convertNodeTailwind(node, 0);
-
-    figma.ui.postMessage({
-      type: "selection-update",
-      data: props,
-      html,
-      tailwind,
-    });
+    pushSelectionUpdate(node);
   });
 }
 
