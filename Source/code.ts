@@ -682,6 +682,16 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
     : null;
 }
 
+function hexToFigmaColor(hex: string): RGB | null {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  return {
+    r: rgb.r / 255,
+    g: rgb.g / 255,
+    b: rgb.b / 255,
+  };
+}
+
 /**
  * Calculate color distance
  */
@@ -845,10 +855,11 @@ if (figma.editorType === "figma") {
 
     if (message.type === "update-node") {
       const nodeId = message.nodeId as string | undefined;
+      const parentId = message.parentId as string | undefined;
       const property = message.property as string | undefined;
-      const value = Number(message.value);
+      const rawValue = message.value;
 
-      if (!nodeId || !property || !Number.isFinite(value)) return;
+      if (!nodeId || !property) return;
 
       const node = await figma.getNodeByIdAsync(nodeId);
       if (!node || node.type === "DOCUMENT" || node.type === "PAGE") return;
@@ -858,19 +869,190 @@ if (figma.editorType === "figma") {
         return;
       }
 
-      if (property === "x" && "x" in node) {
-        node.x = value;
-      } else if (property === "y" && "y" in node) {
-        node.y = value;
-      } else if (property === "width" && "resize" in node) {
+      const numberValue = Number(rawValue);
+
+      if (property === "x" && "x" in node && Number.isFinite(numberValue)) {
+        node.x = numberValue;
+      } else if (
+        property === "y" &&
+        "y" in node &&
+        Number.isFinite(numberValue)
+      ) {
+        node.y = numberValue;
+      } else if (
+        property === "width" &&
+        "resize" in node &&
+        Number.isFinite(numberValue)
+      ) {
         const height = "height" in node ? node.height : 0;
-        if (value > 0 && height > 0) (node as any).resize(value, height);
-      } else if (property === "height" && "resize" in node) {
+        if (numberValue > 0 && height > 0)
+          (node as any).resize(numberValue, height);
+      } else if (
+        property === "height" &&
+        "resize" in node &&
+        Number.isFinite(numberValue)
+      ) {
         const width = "width" in node ? node.width : 0;
-        if (value > 0 && width > 0) (node as any).resize(width, value);
+        if (numberValue > 0 && width > 0)
+          (node as any).resize(width, numberValue);
+      } else if (
+        property === "rotation" &&
+        "rotation" in node &&
+        Number.isFinite(numberValue)
+      ) {
+        (node as any).rotation = numberValue;
+      } else if (
+        property === "opacity" &&
+        "opacity" in node &&
+        Number.isFinite(numberValue)
+      ) {
+        const clamped = Math.max(0, Math.min(1, numberValue));
+        (node as any).opacity = clamped;
+      } else if (
+        property === "cornerRadius" &&
+        "cornerRadius" in node &&
+        Number.isFinite(numberValue)
+      ) {
+        (node as any).cornerRadius = numberValue;
+      } else if (
+        property === "cornerRadius" &&
+        "topLeftRadius" in node &&
+        typeof rawValue === "object" &&
+        rawValue !== null
+      ) {
+        const { topLeft, topRight, bottomRight, bottomLeft } = rawValue as any;
+        if (
+          Number.isFinite(topLeft) &&
+          Number.isFinite(topRight) &&
+          Number.isFinite(bottomRight) &&
+          Number.isFinite(bottomLeft)
+        ) {
+          (node as any).topLeftRadius = topLeft;
+          (node as any).topRightRadius = topRight;
+          (node as any).bottomRightRadius = bottomRight;
+          (node as any).bottomLeftRadius = bottomLeft;
+        }
+      } else if (
+        property === "padding" &&
+        Number.isFinite(numberValue) &&
+        ("paddingLeft" in node || "padding" in node)
+      ) {
+        if ("paddingLeft" in node) {
+          (node as any).paddingLeft = numberValue;
+          (node as any).paddingRight = numberValue;
+          (node as any).paddingTop = numberValue;
+          (node as any).paddingBottom = numberValue;
+        } else if ("padding" in node) {
+          (node as any).padding = numberValue;
+        }
+      } else if (
+        property === "padding" &&
+        "paddingLeft" in node &&
+        typeof rawValue === "object" &&
+        rawValue !== null
+      ) {
+        const { top, right, bottom, left } = rawValue as any;
+        if (
+          Number.isFinite(top) &&
+          Number.isFinite(right) &&
+          Number.isFinite(bottom) &&
+          Number.isFinite(left)
+        ) {
+          (node as any).paddingTop = top;
+          (node as any).paddingRight = right;
+          (node as any).paddingBottom = bottom;
+          (node as any).paddingLeft = left;
+        }
+      } else if (
+        property === "itemSpacing" &&
+        "itemSpacing" in node &&
+        Number.isFinite(numberValue)
+      ) {
+        (node as any).itemSpacing = numberValue;
+      } else if (
+        property === "layoutGrow" &&
+        "layoutGrow" in node &&
+        Number.isFinite(numberValue)
+      ) {
+        (node as any).layoutGrow = numberValue;
+      } else if (property === "layoutAlign" && "layoutAlign" in node) {
+        const allowed = ["MIN", "CENTER", "MAX", "STRETCH"];
+        if (allowed.includes(String(rawValue).toUpperCase())) {
+          (node as any).layoutAlign = String(rawValue).toUpperCase();
+        }
+      } else if (property === "name") {
+        node.name = String(rawValue);
+      } else if (property === "fill" && "fills" in node) {
+        const color = hexToFigmaColor(String(rawValue));
+        if (color) {
+          const existing = Array.isArray((node as any).fills)
+            ? (node as any).fills[0]
+            : null;
+          const opacity =
+            existing && typeof existing.opacity === "number"
+              ? existing.opacity
+              : 1;
+          (node as any).fills = [{ type: "SOLID", color, opacity }];
+        }
+      } else if (property === "stroke" && "strokes" in node) {
+        const color = hexToFigmaColor(String(rawValue));
+        if (color) {
+          const existing = Array.isArray((node as any).strokes)
+            ? (node as any).strokes[0]
+            : null;
+          const opacity =
+            existing && typeof existing.opacity === "number"
+              ? existing.opacity
+              : 1;
+          (node as any).strokes = [{ type: "SOLID", color, opacity }];
+        }
+      } else if (
+        property === "strokeWeight" &&
+        "strokeWeight" in node &&
+        Number.isFinite(numberValue)
+      ) {
+        (node as any).strokeWeight = numberValue;
+      } else if (property === "strokeAlign" && "strokeAlign" in node) {
+        const allowed = ["INSIDE", "OUTSIDE", "CENTER"];
+        if (allowed.includes(String(rawValue).toUpperCase())) {
+          (node as any).strokeAlign = String(rawValue).toUpperCase();
+        }
+      } else if (
+        property === "fontSize" &&
+        node.type === "TEXT" &&
+        Number.isFinite(numberValue)
+      ) {
+        const textNode = node as TextNode;
+        if (textNode.fontName !== figma.mixed) {
+          await figma.loadFontAsync(textNode.fontName as FontName);
+          textNode.fontSize = numberValue;
+        }
+      } else if (property === "characters" && node.type === "TEXT") {
+        const textNode = node as TextNode;
+        if (textNode.fontName !== figma.mixed) {
+          await figma.loadFontAsync(textNode.fontName as FontName);
+          textNode.characters = String(rawValue);
+        }
       }
 
-      pushSelectionUpdate(node as SceneNode);
+      if (parentId) {
+        const parentNode = await figma.getNodeByIdAsync(parentId);
+        if (
+          parentNode &&
+          parentNode.type !== "DOCUMENT" &&
+          parentNode.type !== "PAGE"
+        ) {
+          pushSelectionUpdate(parentNode as SceneNode);
+          return;
+        }
+      }
+
+      const selected = figma.currentPage.selection[0];
+      if (selected) {
+        pushSelectionUpdate(selected as SceneNode);
+      } else {
+        pushSelectionUpdate(node as SceneNode);
+      }
       return;
     }
   };
