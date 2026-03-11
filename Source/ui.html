@@ -843,6 +843,7 @@
       let tokenSearchQuery = "";
       let customColors = {};
       let customGradients = {};
+      let availableFontFamilies = [];
 
       const editableConfig = {
         x: { type: "number" },
@@ -1282,6 +1283,22 @@
             sans: "ui-sans-serif, system-ui, sans-serif",
             serif: "ui-serif, Georgia, serif",
             mono: "ui-monospace, monospace",
+            inter: "Inter, sans-serif",
+            segoe: "'Segoe UI', sans-serif",
+            roboto: "Roboto, sans-serif",
+            helvetica: "Helvetica, Arial, sans-serif",
+            arial: "Arial, sans-serif",
+            noto: "'Noto Sans', sans-serif",
+            georgia: "Georgia, serif",
+            cambria: "Cambria, serif",
+            times: "'Times New Roman', Times, serif",
+            sfmono: "SFMono-Regular, monospace",
+            menlo: "Menlo, monospace",
+            monaco: "Monaco, monospace",
+            consolas: "Consolas, monospace",
+            liberationmono: "'Liberation Mono', monospace",
+            courier: "'Courier New', monospace",
+            robotomono: "'Roboto Mono', monospace",
           },
           letterSpacing: {
             tighter: "-0.05em",
@@ -1438,6 +1455,36 @@
 
       // This function injects custom color and gradient tokens into the active token registry.
       function applyCustomTokensToRegistry() {
+        const baseFontFamilyTokens = {
+          sans: "ui-sans-serif, system-ui, sans-serif",
+          serif: "ui-serif, Georgia, serif",
+          mono: "ui-monospace, monospace",
+        };
+        const dynamicFontFamilyTokens = {};
+        availableFontFamilies.forEach((family) => {
+          const normalizedKey = normalizeCustomTokenName(family);
+          if (!normalizedKey || baseFontFamilyTokens[normalizedKey]) return;
+          dynamicFontFamilyTokens[normalizedKey] = {
+            $value: String(family),
+            $type: "fontFamily",
+            $description: `figma.fonts.${normalizedKey}`,
+          };
+        });
+
+        TAILWIND_TOKENS.typography.fontFamily = {
+          ...Object.fromEntries(
+            Object.entries(baseFontFamilyTokens).map(([key, value]) => [
+              key,
+              {
+                $value: value,
+                $type: "fontFamily",
+                $description: `typography.fontFamily.${key}`,
+              },
+            ]),
+          ),
+          ...dynamicFontFamilyTokens,
+        };
+
         const colorGroup = {};
         Object.entries(customColors).forEach(([name, hex]) => {
           if (isValidHexColor(hex)) {
@@ -1550,6 +1597,7 @@
       }
 
       let currentTokenCategory = "colors";
+      const collapsedTokenGroups = {};
 
       /* Render token tabs for each category */
       function renderTokenTabs() {
@@ -1900,7 +1948,6 @@
 
             const colorNameEl = document.createElement("div");
             colorNameEl.className = "token-color-name";
-            colorNameEl.textContent = tokenName;
             group.appendChild(colorNameEl);
 
             const shadesContainer = document.createElement("div");
@@ -1990,14 +2037,20 @@
                     return;
                   }
 
+                  const payload = {
+                    type: "apply-typography-token",
+                    nodeId: currentNodeId,
+                    category: tokenName,
+                    tokenName: shade,
+                  };
+
+                  if (tokenName === "fontFamily") {
+                    Object.assign(payload, { fontFamily: String(shadeValue) });
+                  }
+
                   parent.postMessage(
                     {
-                      pluginMessage: {
-                        type: "apply-typography-token",
-                        nodeId: currentNodeId,
-                        category: tokenName,
-                        tokenName: shade,
-                      },
+                      pluginMessage: payload,
                     },
                     "*",
                   );
@@ -2045,6 +2098,19 @@
             if (visibleShadeCount === 0) {
               return;
             }
+
+            const groupKey = `${currentTokenCategory}:${tokenName}`;
+            const isSearchActive = tokenSearchQuery.trim().length > 0;
+            const isCollapsed =
+              !isSearchActive && collapsedTokenGroups[groupKey] === true;
+
+            colorNameEl.textContent = `${isCollapsed ? "▸" : "▾"} ${tokenName} (${visibleShadeCount})`;
+            colorNameEl.addEventListener("click", () => {
+              collapsedTokenGroups[groupKey] = !collapsedTokenGroups[groupKey];
+              renderTokenTree();
+            });
+
+            shadesContainer.style.display = isCollapsed ? "none" : "flex";
 
             group.appendChild(shadesContainer);
             tokenTree.appendChild(group);
@@ -2715,6 +2781,11 @@
             message.gradients && typeof message.gradients === "object"
               ? message.gradients
               : {};
+          availableFontFamilies = Array.isArray(message.availableFontFamilies)
+            ? message.availableFontFamilies
+                .map((fontFamily) => String(fontFamily || "").trim())
+                .filter(Boolean)
+            : [];
           applyCustomTokensToRegistry();
           renderSavedGradientOptions();
           renderTokenTabs();

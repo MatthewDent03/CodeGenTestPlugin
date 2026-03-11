@@ -1173,6 +1173,22 @@ const RAW_TAILWIND_TOKENS = {
       sans: "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       serif: "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif",
       mono: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+      inter: "Inter, sans-serif",
+      segoe: "'Segoe UI', sans-serif",
+      roboto: "Roboto, sans-serif",
+      helvetica: "Helvetica, Arial, sans-serif",
+      arial: "Arial, sans-serif",
+      noto: "'Noto Sans', sans-serif",
+      georgia: "Georgia, serif",
+      cambria: "Cambria, serif",
+      times: "'Times New Roman', Times, serif",
+      sfmono: "SFMono-Regular, monospace",
+      menlo: "Menlo, monospace",
+      monaco: "Monaco, monospace",
+      consolas: "Consolas, monospace",
+      liberationmono: "'Liberation Mono', monospace",
+      courier: "'Courier New', monospace",
+      robotomono: "'Roboto Mono', monospace",
     },
     letterSpacing: {
       tighter: "-0.05em",
@@ -1626,6 +1642,95 @@ if (figma.editorType === "figma") {
   // This object caches custom gradients for fast UI sync.
   type CustomGradientToken = { from: string; to: string; stops?: string[] };
   let customGradientsStore: Record<string, CustomGradientToken> = {};
+  // Cache available fonts to avoid repeated API calls.
+  let availableFontsCache: Font[] | null = null;
+
+  // Tailwind-compatible candidate families (ordered by preference).
+  const tailwindFontFamilyCandidates: Record<string, string[]> = {
+    sans: [
+      "Inter",
+      "Segoe UI",
+      "Roboto",
+      "Helvetica Neue",
+      "Arial",
+      "Noto Sans",
+      "Helvetica",
+    ],
+    serif: ["Georgia", "Cambria", "Times New Roman", "Times"],
+    mono: [
+      "SF Mono",
+      "Menlo",
+      "Monaco",
+      "Consolas",
+      "Liberation Mono",
+      "Courier New",
+      "Roboto Mono",
+    ],
+  };
+
+  async function getAvailableFontsCached(): Promise<Font[]> {
+    if (!availableFontsCache) {
+      availableFontsCache = await figma.listAvailableFontsAsync();
+    }
+    return availableFontsCache;
+  }
+
+  function parseFontStack(fontStack: string): string[] {
+    const genericFamilies = new Set([
+      "ui-sans-serif",
+      "ui-serif",
+      "ui-monospace",
+      "system-ui",
+      "sans-serif",
+      "serif",
+      "monospace",
+      "-apple-system",
+      "blinkmacsystemfont",
+      "apple color emoji",
+      "segoe ui emoji",
+      "segoe ui symbol",
+      "noto color emoji",
+    ]);
+
+    return fontStack
+      .split(",")
+      .map((part) => part.trim().replace(/^['\"]|['\"]$/g, ""))
+      .filter(Boolean)
+      .filter((family) => !genericFamilies.has(family.toLowerCase()));
+  }
+
+  function resolveFontFromFamilies(
+    availableFonts: Font[],
+    families: string[],
+  ): FontName | null {
+    const preferredStyles = ["Regular", "Book", "Roman", "Normal", "Medium"];
+
+    for (const family of families) {
+      const matching = availableFonts.filter(
+        (font) => font.fontName.family.toLowerCase() === family.toLowerCase(),
+      );
+      if (matching.length === 0) continue;
+
+      for (const style of preferredStyles) {
+        const preferred = matching.find(
+          (font) => font.fontName.style.toLowerCase() === style.toLowerCase(),
+        );
+        if (preferred) {
+          return {
+            family: preferred.fontName.family,
+            style: preferred.fontName.style,
+          };
+        }
+      }
+
+      return {
+        family: matching[0].fontName.family,
+        style: matching[0].fontName.style,
+      };
+    }
+
+    return null;
+  }
 
   // This pattern validates full 6-digit hex color strings.
   const hexPattern = /^#([a-f\d]{6})$/i;
@@ -1678,10 +1783,22 @@ if (figma.editorType === "figma") {
 
   // This function posts current custom token data to the UI iframe.
   async function postCustomTokensToUI() {
+    const availableFonts = await getAvailableFontsCached();
+    const availableFontFamilies = Array.from(
+      new Set(
+        availableFonts
+          .map((font) => font.fontName.family)
+          .filter(
+            (family) => typeof family === "string" && family.trim().length > 0,
+          ),
+      ),
+    ).sort((a, b) => a.localeCompare(b));
+
     figma.ui.postMessage({
       type: "custom-tokens-update",
       colors: customColorsStore,
       gradients: customGradientsStore,
+      availableFontFamilies,
     });
   }
 
@@ -2256,6 +2373,7 @@ if (figma.editorType === "figma") {
       const nodeId = message.nodeId as string | undefined;
       const category = message.category as string | undefined;
       const tokenName = message.tokenName as string | undefined;
+      const requestedFontFamily = String(message.fontFamily || "").trim();
 
       if (!nodeId || !category || !tokenName) return;
 
@@ -2267,14 +2385,16 @@ if (figma.editorType === "figma") {
 
       const textNode = node as TextNode;
 
-      // Get typography value from registry
-      const typographyValue = tokenRegistry.getTypographyToken(
-        category,
-        tokenName,
-      );
-      if (!typographyValue) {
-        figma.notify("Typography token not found");
-        return;
+      let typographyValue: string | null = null;
+      if (category === "fontFamily" && requestedFontFamily) {
+        typographyValue = requestedFontFamily;
+      } else {
+        // Get typography value from registry
+        typographyValue = tokenRegistry.getTypographyToken(category, tokenName);
+        if (!typographyValue) {
+          figma.notify("Typography token not found");
+          return;
+        }
       }
 
       // Load font before making changes
@@ -2370,54 +2490,36 @@ if (figma.editorType === "figma") {
           figma.notify("Cannot apply font weight to mixed font selection");
         }
       } else if (category === "fontFamily") {
-        // Map generic font families to common Figma fonts
-        const fontFamilyMap: Record<
-          string,
-          Array<{ family: string; style: string }>
-        > = {
-          sans: [
-            { family: "Inter", style: "Regular" },
-            { family: "Roboto", style: "Regular" },
-            { family: "Arial", style: "Regular" },
-            { family: "Helvetica", style: "Regular" },
-          ],
-          serif: [
-            { family: "Georgia", style: "Regular" },
-            { family: "Times New Roman", style: "Regular" },
-            { family: "Playfair Display", style: "Regular" },
-          ],
-          mono: [
-            { family: "Roboto Mono", style: "Regular" },
-            { family: "Courier New", style: "Regular" },
-            { family: "Consolas", style: "Regular" },
-            { family: "Monaco", style: "Regular" },
-          ],
-        };
+        const availableFonts = await getAvailableFontsCached();
+        const tokenStackFamilies = parseFontStack(typographyValue);
+        const defaultFamilies = tailwindFontFamilyCandidates[tokenName] || [];
+        const candidateFamilies = [
+          ...defaultFamilies,
+          ...tokenStackFamilies.filter(
+            (family) =>
+              !defaultFamilies.some(
+                (defaultFamily) =>
+                  defaultFamily.toLowerCase() === family.toLowerCase(),
+              ),
+          ),
+        ];
 
-        const fontsToTry = fontFamilyMap[tokenName] || [];
-        let fontApplied = false;
+        const resolvedFont = resolveFontFromFamilies(
+          availableFonts,
+          candidateFamilies,
+        );
 
-        // Try each font in order until one loads successfully
-        for (const fontOption of fontsToTry) {
-          try {
-            await figma.loadFontAsync(fontOption);
-            textNode.fontName = fontOption;
-            textNode.setPluginData(
-              "applied-typography-token",
-              `fontFamily:${tokenName}`,
-            );
-            figma.notify(`Applied font: ${fontOption.family}`);
-            fontApplied = true;
-            break;
-          } catch (error) {
-            // Font not available, try next one
-            continue;
-          }
-        }
-
-        if (!fontApplied) {
+        if (resolvedFont) {
+          await figma.loadFontAsync(resolvedFont);
+          textNode.fontName = resolvedFont;
+          textNode.setPluginData(
+            "applied-typography-token",
+            `fontFamily:${tokenName}`,
+          );
+          figma.notify(`Applied font: ${resolvedFont.family}`);
+        } else {
           figma.notify(
-            `No ${tokenName} fonts available. Install Inter, Roboto, or Arial.`,
+            `No Tailwind-compatible ${tokenName} font is available in Figma on this machine.`,
           );
         }
       }
