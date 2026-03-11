@@ -112,6 +112,17 @@ const opacityMap: Record<number, string> = {
   100: "100",
 };
 
+// === Shadow mapping (by blur radius px) ===
+const shadowRadiusMap: Record<number, string> = {
+  0: "none",
+  2: "sm",
+  3: "",
+  6: "md",
+  10: "lg",
+  15: "xl",
+  25: "2xl",
+};
+
 // === Tailwind color map (full v3 palette) ===
 const tailwindColorMap: Record<string, string> = {
   // === SPECIAL COLORS ===
@@ -644,6 +655,152 @@ function opacityToTailwind(opacity: number): string {
   return `${percent}`;
 }
 
+function effectShadowToTailwind(node: SceneNode): string {
+  if (!("effects" in node)) return "";
+
+  const effects = (node as any).effects;
+  if (!Array.isArray(effects) || effects.length === 0) return "";
+
+  const firstShadow = effects.find(
+    (effect: any) =>
+      effect &&
+      effect.visible !== false &&
+      (effect.type === "DROP_SHADOW" || effect.type === "INNER_SHADOW"),
+  );
+
+  if (!firstShadow) return "";
+  if (firstShadow.type === "INNER_SHADOW") return "shadow-inner";
+
+  const radius = Number(firstShadow.radius || 0);
+  const shadowClass = findClosest(radius, shadowRadiusMap, 2);
+  if (shadowClass === "none") return "shadow-none";
+  if (shadowClass === "") return "shadow";
+  if (shadowClass) return `shadow-${shadowClass}`;
+  return "shadow-lg";
+}
+
+function shadowEffectsFromToken(tokenName: string): any[] | null {
+  const black = { r: 0, g: 0, b: 0 };
+  const presets: Record<string, any[]> = {
+    none: [],
+    sm: [
+      {
+        type: "DROP_SHADOW",
+        color: { ...black, a: 0.05 },
+        offset: { x: 0, y: 1 },
+        radius: 2,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL",
+      },
+    ],
+    DEFAULT: [
+      {
+        type: "DROP_SHADOW",
+        color: { ...black, a: 0.1 },
+        offset: { x: 0, y: 1 },
+        radius: 3,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL",
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { ...black, a: 0.1 },
+        offset: { x: 0, y: 1 },
+        radius: 2,
+        spread: -1,
+        visible: true,
+        blendMode: "NORMAL",
+      },
+    ],
+    md: [
+      {
+        type: "DROP_SHADOW",
+        color: { ...black, a: 0.1 },
+        offset: { x: 0, y: 4 },
+        radius: 6,
+        spread: -1,
+        visible: true,
+        blendMode: "NORMAL",
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { ...black, a: 0.1 },
+        offset: { x: 0, y: 2 },
+        radius: 4,
+        spread: -2,
+        visible: true,
+        blendMode: "NORMAL",
+      },
+    ],
+    lg: [
+      {
+        type: "DROP_SHADOW",
+        color: { ...black, a: 0.1 },
+        offset: { x: 0, y: 10 },
+        radius: 8,
+        spread: -3,
+        visible: true,
+        blendMode: "NORMAL",
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { ...black, a: 0.1 },
+        offset: { x: 0, y: 4 },
+        radius: 6,
+        spread: -4,
+        visible: true,
+        blendMode: "NORMAL",
+      },
+    ],
+    xl: [
+      {
+        type: "DROP_SHADOW",
+        color: { ...black, a: 0.1 },
+        offset: { x: 0, y: 20 },
+        radius: 13,
+        spread: -5,
+        visible: true,
+        blendMode: "NORMAL",
+      },
+      {
+        type: "DROP_SHADOW",
+        color: { ...black, a: 0.04 },
+        offset: { x: 0, y: 8 },
+        radius: 10,
+        spread: -6,
+        visible: true,
+        blendMode: "NORMAL",
+      },
+    ],
+    "2xl": [
+      {
+        type: "DROP_SHADOW",
+        color: { ...black, a: 0.25 },
+        offset: { x: 0, y: 25 },
+        radius: 25,
+        spread: -12,
+        visible: true,
+        blendMode: "NORMAL",
+      },
+    ],
+    inner: [
+      {
+        type: "INNER_SHADOW",
+        color: { ...black, a: 0.05 },
+        offset: { x: 0, y: 2 },
+        radius: 4,
+        spread: 0,
+        visible: true,
+        blendMode: "NORMAL",
+      },
+    ],
+  };
+
+  return tokenName in presets ? presets[tokenName] : null;
+}
+
 /**
  * Converts a hex color string (e.g. "#ef4444") to RGB object with values 0-255
  * Returns null if the hex format is invalid
@@ -667,8 +824,8 @@ function hexToRgb(
   };
 }
 
-// === Tailwind Token Registry ===
-const TAILWIND_TOKENS = {
+// === Tailwind Token Registry (raw values) ===
+const RAW_TAILWIND_TOKENS = {
   colors: {
     slate: {
       "50": "#f8fafc",
@@ -1080,9 +1237,78 @@ const TAILWIND_TOKENS = {
       "2xl": "40px",
       "3xl": "64px",
     },
+    shadow: {
+      none: "none",
+      sm: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+      DEFAULT: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+      md: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+      lg: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+      xl: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+      "2xl": "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+      inner: "inset 0 2px 4px 0 rgb(0 0 0 / 0.05)",
+    },
   },
   gradients: {},
 };
+
+// W3C Design Token format type: includes value, type, and description metadata
+type W3CToken = {
+  $value: string;
+  $type?: string;
+  $description?: string;
+};
+
+// Infers token type based on the token's path in the token tree
+function inferTokenType(path: string[]): string {
+  const [category, subcategory] = path;
+  if (category === "colors") return "color";
+  if (category === "spacing") return "dimension";
+  if (category === "typography") {
+    if (subcategory === "fontFamily") return "fontFamily";
+    if (subcategory === "fontWeight") return "fontWeight";
+    if (subcategory === "lineHeight") return "number";
+    return "dimension";
+  }
+  if (category === "effects") {
+    if (subcategory === "opacity") return "number";
+    if (subcategory === "shadow") return "shadow";
+    return "dimension";
+  }
+  if (category === "gradients") return "gradient";
+  return "string";
+}
+
+// Converts raw Tailwind token objects into W3C Design Token format
+// Wraps string values with $value, $type, and $description metadata
+function toW3CTokens(node: any, path: string[] = []): any {
+  if (node && typeof node === "object" && !Array.isArray(node)) {
+    // Skip nodes that are already in W3C format
+    if ("$value" in node) return node;
+    // Recursively process object properties
+    const next: Record<string, unknown> = {};
+    Object.entries(node).forEach(([key, value]) => {
+      next[key] = toW3CTokens(value, [...path, key]);
+    });
+    return next;
+  }
+
+  if (typeof node === "string") {
+    // Wrap primitive string values in W3C format with inferred type and path-based description
+    const tokenType = inferTokenType(path);
+    const description = path.join(".");
+    const token: W3CToken = {
+      $value: node,
+      $type: tokenType,
+      $description: description,
+    };
+    return token;
+  }
+
+  return node;
+}
+
+// Converts all raw Tailwind tokens to W3C Design Token Format 2025.10
+const TAILWIND_TOKENS = toW3CTokens(RAW_TAILWIND_TOKENS);
 
 /**
  * TokenRegistry manages access to design tokens
@@ -1092,6 +1318,17 @@ class TokenRegistry {
 
   constructor(tokens: typeof TAILWIND_TOKENS) {
     this.tokenData = tokens;
+  }
+
+  private extractTokenValue(token: any): string | null {
+    if (typeof token === "string") {
+      return token;
+    }
+    if (token && typeof token === "object" && "$value" in token) {
+      const tokenValue = (token as any).$value;
+      return typeof tokenValue === "string" ? tokenValue : String(tokenValue);
+    }
+    return null;
   }
 
   /**
@@ -1109,13 +1346,14 @@ class TokenRegistry {
       return null;
     }
 
-    // Handle simple colors (black , white)
-    if (typeof colorGroup === "string") {
-      return colorGroup;
+    // Handle simple colors (black, white) as direct tokens
+    const directColorValue = this.extractTokenValue(colorGroup);
+    if (directColorValue !== null) {
+      return directColorValue;
     }
 
     // Handle complex colors with shades
-    return colorGroup[shade] || null;
+    return this.extractTokenValue(colorGroup[shade]);
   }
 
   /**
@@ -1129,8 +1367,11 @@ class TokenRegistry {
 
     const colorGroup = categoryData[colorName];
 
-    // Return empty array if color doesn't exist
-    if (typeof colorGroup !== "object") {
+    // Return empty array if color doesn't exist or is a direct token leaf
+    if (
+      typeof colorGroup !== "object" ||
+      (colorGroup && "$value" in (colorGroup as any))
+    ) {
       return [];
     }
 
@@ -1153,7 +1394,7 @@ class TokenRegistry {
     if (!spacingData) {
       return null;
     }
-    return spacingData[tokenName] || null;
+    return this.extractTokenValue(spacingData[tokenName]);
   }
 
   /**
@@ -1170,7 +1411,7 @@ class TokenRegistry {
     if (!categoryData) {
       return null;
     }
-    return categoryData[tokenName] || null;
+    return this.extractTokenValue(categoryData[tokenName]);
   }
 
   /**
@@ -1198,7 +1439,7 @@ class TokenRegistry {
     if (!categoryData) {
       return null;
     }
-    return categoryData[tokenName] || null;
+    return this.extractTokenValue(categoryData[tokenName]);
   }
 }
 
@@ -1375,8 +1616,80 @@ function layoutModeToTailwind(
 if (figma.editorType === "figma") {
   const compactSize = { width: 380, height: 500 };
   const popoutSize = { width: 760, height: 720 };
+  // This key stores custom color tokens in plugin storage.
+  const CUSTOM_COLORS_STORAGE_KEY = "codegen.custom.tokens.colors.v1";
+  // This key stores custom gradient tokens in plugin storage.
+  const CUSTOM_GRADIENTS_STORAGE_KEY = "codegen.custom.tokens.gradients.v1";
+
+  // This object caches custom colors for fast UI sync.
+  let customColorsStore: Record<string, string> = {};
+  // This object caches custom gradients for fast UI sync.
+  type CustomGradientToken = { from: string; to: string; stops?: string[] };
+  let customGradientsStore: Record<string, CustomGradientToken> = {};
+
+  // This pattern validates full 6-digit hex color strings.
+  const hexPattern = /^#([a-f\d]{6})$/i;
 
   figma.showUI(__uiFiles__.main, compactSize);
+
+  // This function loads custom token data from persistent plugin storage.
+  async function loadCustomTokensFromStorage() {
+    const colors = await figma.clientStorage.getAsync(
+      CUSTOM_COLORS_STORAGE_KEY,
+    );
+    const gradients = await figma.clientStorage.getAsync(
+      CUSTOM_GRADIENTS_STORAGE_KEY,
+    );
+
+    customColorsStore =
+      colors && typeof colors === "object"
+        ? (colors as Record<string, string>)
+        : {};
+    customGradientsStore = {};
+    if (gradients && typeof gradients === "object") {
+      Object.entries(gradients as Record<string, any>).forEach(
+        ([name, gradientValue]) => {
+          if (!gradientValue || typeof gradientValue !== "object") return;
+
+          const rawStops = Array.isArray((gradientValue as any).stops)
+            ? ((gradientValue as any).stops as any[])
+                .map((stop) => String(stop || "").trim())
+                .filter(Boolean)
+            : [];
+
+          if (rawStops.length >= 2) {
+            customGradientsStore[name] = {
+              from: rawStops[0],
+              to: rawStops[rawStops.length - 1],
+              stops: rawStops,
+            };
+            return;
+          }
+
+          const from = String((gradientValue as any).from || "").trim();
+          const to = String((gradientValue as any).to || "").trim();
+          if (from && to) {
+            customGradientsStore[name] = { from, to };
+          }
+        },
+      );
+    }
+  }
+
+  // This function posts current custom token data to the UI iframe.
+  async function postCustomTokensToUI() {
+    figma.ui.postMessage({
+      type: "custom-tokens-update",
+      colors: customColorsStore,
+      gradients: customGradientsStore,
+    });
+  }
+
+  // This startup flow loads and sends custom tokens when UI opens.
+  void (async () => {
+    await loadCustomTokensFromStorage();
+    await postCustomTokensToUI();
+  })();
 
   function pushSelectionUpdate(node: SceneNode) {
     const props = extractNodeProperties(node);
@@ -1396,6 +1709,70 @@ if (figma.editorType === "figma") {
     if (message.type === "toggle-popout") {
       const nextSize = message.poppedOut ? popoutSize : compactSize;
       figma.ui.resize(nextSize.width, nextSize.height);
+      return;
+    }
+
+    if (message.type === "request-custom-tokens") {
+      // This branch sends fresh custom token data on UI request.
+      await loadCustomTokensFromStorage();
+      await postCustomTokensToUI();
+      return;
+    }
+
+    if (message.type === "save-custom-color-token") {
+      // This branch validates and persists a custom color token.
+      const tokenName = String(message.name || "")
+        .trim()
+        .toLowerCase();
+      const hexValue = String(message.hex || "")
+        .trim()
+        .toLowerCase();
+      if (!tokenName || !hexPattern.test(hexValue)) {
+        figma.notify("Invalid custom color token");
+        return;
+      }
+
+      customColorsStore[tokenName] = hexValue;
+      await figma.clientStorage.setAsync(
+        CUSTOM_COLORS_STORAGE_KEY,
+        customColorsStore,
+      );
+      await postCustomTokensToUI();
+      figma.notify(`Saved custom color: ${tokenName}`);
+      return;
+    }
+
+    if (message.type === "save-custom-gradient-token") {
+      // This branch validates and persists a custom gradient token.
+      const tokenName = String(message.name || "")
+        .trim()
+        .toLowerCase();
+      const stops = Array.isArray(message.stops)
+        ? (message.stops as any[])
+            .map((stop) => String(stop || "").trim())
+            .filter(Boolean)
+        : [];
+      const from = String(message.from || "").trim();
+      const to = String(message.to || "").trim();
+      const normalizedStops =
+        stops.length >= 2 ? stops : from && to ? [from, to] : [];
+
+      if (!tokenName || normalizedStops.length < 2) {
+        figma.notify("Invalid custom gradient token");
+        return;
+      }
+
+      customGradientsStore[tokenName] = {
+        from: normalizedStops[0],
+        to: normalizedStops[normalizedStops.length - 1],
+        stops: normalizedStops,
+      };
+      await figma.clientStorage.setAsync(
+        CUSTOM_GRADIENTS_STORAGE_KEY,
+        customGradientsStore,
+      );
+      await postCustomTokensToUI();
+      figma.notify(`Saved custom gradient: ${tokenName}`);
       return;
     }
 
@@ -1649,6 +2026,46 @@ if (figma.editorType === "figma") {
       }
 
       // Re-sync UI with fresh data
+      pushSelectionUpdate(node as SceneNode);
+      return;
+    }
+
+    if (message.type === "apply-custom-color") {
+      const nodeId = message.nodeId as string | undefined;
+      const colorHex = message.colorHex as string | undefined;
+      const colorName = (message.colorName as string | undefined) || "custom";
+      const property = message.property as string | undefined;
+
+      if (!nodeId || !colorHex) return;
+
+      const node = await figma.getNodeByIdAsync(nodeId);
+      if (!node) return;
+
+      const figmaColor = hexToFigmaColor(colorHex);
+      if (!figmaColor) {
+        figma.notify("Invalid custom color");
+        return;
+      }
+
+      if (property === "stroke" && "strokes" in node) {
+        const strokePaint: SolidPaint = {
+          type: "SOLID",
+          color: figmaColor,
+          opacity: 1,
+        };
+        (node as any).strokes = [strokePaint];
+        node.setPluginData("applied-color-token", `custom/${colorName}`);
+        node.setPluginData("tailwind-class", `border-[${colorHex}]`);
+        figma.notify(`Applied custom stroke: ${colorName}`);
+      } else if ("fills" in node) {
+        (node as any).fills = [
+          { type: "SOLID", color: figmaColor, opacity: 1 },
+        ];
+        node.setPluginData("applied-color-token", `custom/${colorName}`);
+        node.setPluginData("tailwind-class", `bg-[${colorHex}]`);
+        figma.notify(`Applied custom fill: ${colorName}`);
+      }
+
       pushSelectionUpdate(node as SceneNode);
       return;
     }
@@ -2010,7 +2427,7 @@ if (figma.editorType === "figma") {
       return;
     }
 
-    // Handle effects token application (borderWidth, opacity, blur)
+    // Handle effects token application (borderWidth, opacity, blur, shadow)
     if (message.type === "apply-effects-token") {
       const nodeId = message.nodeId as string | undefined;
       const category = message.category as string | undefined;
@@ -2065,8 +2482,8 @@ if (figma.editorType === "figma") {
             ? (node as any).effects
             : [];
 
-          // Use LAYER_BLUR for simplified blur (no type distinction)
-          const blurEffectType = "LAYER_BLUR";
+          const blurEffectType =
+            blurType === "BACKGROUND_BLUR" ? "BACKGROUND_BLUR" : "LAYER_BLUR";
 
           // Remove existing blur effects
           const nonBlurEffects = existingEffects.filter((effect: any) => {
@@ -2089,9 +2506,34 @@ if (figma.editorType === "figma") {
             (node as any).effects = nonBlurEffects;
           }
 
-          node.setPluginData("applied-effects-token", `blur:${tokenName}`);
-          figma.notify(`Applied blur: ${tokenName}`);
+          node.setPluginData(
+            "applied-effects-token",
+            `blur:${tokenName}:${blurEffectType}`,
+          );
+          figma.notify(
+            `Applied ${blurEffectType === "BACKGROUND_BLUR" ? "background" : "layer"} blur: ${tokenName}`,
+          );
         }
+      } else if (category === "shadow" && "effects" in node) {
+        const existingEffects = Array.isArray((node as any).effects)
+          ? (node as any).effects
+          : [];
+
+        const nonShadowEffects = existingEffects.filter((effect: any) => {
+          return (
+            effect.type !== "DROP_SHADOW" && effect.type !== "INNER_SHADOW"
+          );
+        });
+
+        const shadowEffects = shadowEffectsFromToken(tokenName);
+        if (!shadowEffects) {
+          figma.notify(`Unknown shadow token: ${tokenName}`);
+          return;
+        }
+
+        (node as any).effects = [...nonShadowEffects, ...shadowEffects];
+        node.setPluginData("applied-effects-token", `shadow:${tokenName}`);
+        figma.notify(`Applied shadow: ${tokenName}`);
       } else {
         figma.notify(`Cannot apply ${category} to this node type`);
         return;
@@ -2629,6 +3071,9 @@ function convertShapeTailwind(
     else if (la === "MAX") classList.push("self-end");
   }
 
+  const shadowClass = effectShadowToTailwind(node);
+  if (shadowClass) classList.push(shadowClass);
+
   return `${indent(level)}<${htmlTag} class="${classList
     .filter(Boolean)
     .join(" ")}"></${htmlTag}>\n`;
@@ -2812,18 +3257,8 @@ function convertFrameTailwind(
     if (opacityClass) classList.push(opacityClass);
   }
 
-  // Shadows
-  if ("effects" in node) {
-    const effects = (node as any).effects;
-    if (Array.isArray(effects) && effects.length > 0) {
-      for (const effect of effects) {
-        if (effect.type === "DROP_SHADOW") {
-          classList.push("shadow-lg");
-          break;
-        }
-      }
-    }
-  }
+  const shadowClass = effectShadowToTailwind(node);
+  if (shadowClass) classList.push(shadowClass);
 
   let childrenHtml = "";
   for (const child of node.children) {

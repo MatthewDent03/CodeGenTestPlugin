@@ -365,6 +365,56 @@
         overflow-y: auto;
       }
 
+      .token-search {
+        margin-bottom: 10px;
+      }
+
+      .token-search input {
+        width: 100%;
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid #d1d5db;
+        background: #ffffff;
+        color: #1f2937;
+        font-size: 12px;
+      }
+
+      .token-search input:focus {
+        outline: none;
+        border-color: #9ca3af;
+      }
+
+      .custom-token-controls {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #d1d5db;
+        display: grid;
+        gap: 6px;
+      }
+
+      .custom-token-row {
+        display: flex;
+        gap: 6px;
+      }
+
+      .custom-token-row input,
+      .custom-token-row select {
+        flex: 1;
+        min-width: 0;
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid #d1d5db;
+        background: #ffffff;
+        color: #1f2937;
+        font-size: 12px;
+      }
+
+      .custom-token-row input[type="color"] {
+        flex: 0 0 40px;
+        padding: 2px;
+        cursor: pointer;
+      }
+
       .token-color-group {
         display: flex;
         flex-direction: column;
@@ -460,13 +510,13 @@
       .effects-property-selector {
         margin-bottom: 12px;
         padding: 10px 12px;
-        background: #fef3c7;
-        border: 1px solid #fcd34d;
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
         border-radius: 8px;
         max-height: 280px;
         overflow-y: auto;
         scrollbar-width: thin;
-        scrollbar-color: #fcd34d #fef9e7;
+        scrollbar-color: #9ca3af #e5e7eb;
       }
 
       .effects-property-selector::-webkit-scrollbar {
@@ -474,23 +524,23 @@
       }
 
       .effects-property-selector::-webkit-scrollbar-track {
-        background: #fef9e7;
+        background: #e5e7eb;
       }
 
       .effects-property-selector::-webkit-scrollbar-thumb {
-        background: #fcd34d;
+        background: #9ca3af;
         border-radius: 3px;
       }
 
       .effects-property-selector::-webkit-scrollbar-thumb:hover {
-        background: #f59e0b;
+        background: #6b7280;
       }
 
       .effects-property-selector label {
         display: block;
         font-size: 12px;
         font-weight: 600;
-        color: #92400e;
+        color: #374151;
         margin-bottom: 6px;
       }
 
@@ -498,7 +548,7 @@
         width: 100%;
         padding: 6px 8px;
         border-radius: 6px;
-        border: 1px solid #fcd34d;
+        border: 1px solid #d1d5db;
         background: #ffffff;
         color: #1f2937;
         font-size: 12px;
@@ -519,7 +569,7 @@
 
       .effects-property-selector select:focus {
         outline: none;
-        border-color: #f59e0b;
+        border-color: #6b7280;
       }
 
       .token-shade-value {
@@ -527,6 +577,21 @@
         color: #1f2937;
         font-family: monospace;
         font-weight: 600;
+        max-width: 170px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .gradient-stop-row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-top: 6px;
+      }
+
+      .gradient-stop-row button {
+        flex-shrink: 0;
       }
     </style>
   </head>
@@ -562,6 +627,13 @@
       <button type="button" class="collapsible">Tailwind Color Tokens</button>
       <div class="content">
         <div class="token-tabs" id="token-tabs"></div>
+        <div class="token-search">
+          <input
+            id="token-search-input"
+            type="text"
+            placeholder="Search tokens..."
+          />
+        </div>
         <div
           class="spacing-property-selector"
           id="spacing-property-selector"
@@ -635,6 +707,12 @@
             <option value="INSIDE">Inside</option>
             <option value="OUTSIDE">Outside</option>
           </select>
+
+          <label for="blur-type-select">Blur Type:</label>
+          <select id="blur-type-select">
+            <option value="LAYER_BLUR">Layer Blur</option>
+            <option value="BACKGROUND_BLUR">Background Blur</option>
+          </select>
         </div>
         <div
           class="effects-property-selector"
@@ -655,6 +733,17 @@
             <option value="">-- Select Color --</option>
           </select>
 
+          <div id="gradient-extra-stops"></div>
+
+          <button
+            type="button"
+            id="gradient-add-stop-btn"
+            class="button muted"
+            style="margin-top: 6px; width: 100%"
+          >
+            + Add Another Color Stop
+          </button>
+
           <button
             type="button"
             id="gradient-apply-btn"
@@ -663,6 +752,48 @@
           >
             Apply Gradient
           </button>
+
+          <div class="custom-token-controls">
+            <div class="custom-token-row">
+              <input
+                id="custom-color-name"
+                type="text"
+                placeholder="Custom color name"
+              />
+              <input id="custom-color-value" type="color" value="#3b82f6" />
+              <button type="button" id="save-custom-color-btn" class="button">
+                Save Color
+              </button>
+            </div>
+
+            <div class="custom-token-row">
+              <input
+                id="custom-gradient-name"
+                type="text"
+                placeholder="Custom gradient name"
+              />
+              <button
+                type="button"
+                id="save-custom-gradient-btn"
+                class="button"
+              >
+                Save Gradient
+              </button>
+            </div>
+
+            <div class="custom-token-row">
+              <select id="saved-gradient-select">
+                <option value="">-- Saved Gradients --</option>
+              </select>
+              <button
+                type="button"
+                id="apply-saved-gradient-btn"
+                class="button"
+              >
+                Apply Saved
+              </button>
+            </div>
+          </div>
         </div>
         <div class="token-tree" id="token-tree"></div>
       </div>
@@ -690,6 +821,7 @@
       const colorSwatches = document.getElementById("color-swatches");
       const childFills = document.getElementById("child-fills");
       const tokenTabs = document.getElementById("token-tabs");
+      const tokenSearchInput = document.getElementById("token-search-input");
       const tokenTree = document.getElementById("token-tree");
       const codeOutput = document.getElementById("code-output");
       const tabHtml = document.getElementById("tab-html");
@@ -708,6 +840,9 @@
 
       let isPoppedOut = false;
       let currentNodeId = null;
+      let tokenSearchQuery = "";
+      let customColors = {};
+      let customGradients = {};
 
       const editableConfig = {
         x: { type: "number" },
@@ -798,44 +933,21 @@
         return appState.mode === "html" ? appState.html : appState.tailwind;
       }
 
-      /* === Tailwind Token Registry === */
-      const TAILWIND_TOKENS = {
+      /* === Tailwind Token Registry (raw values) === */
+      const RAW_TAILWIND_TOKENS = {
         colors: {
-          red: {
-            50: "#fef2f2",
-            100: "#fee2e2",
-            200: "#fecaca",
-            300: "#fca5a5",
-            400: "#f87171",
-            500: "#ef4444",
-            600: "#dc2626",
-            700: "#b91c1c",
-            800: "#991b1b",
-            900: "#7f1d1d",
-          },
-          blue: {
-            50: "#eff6ff",
-            100: "#dbeafe",
-            200: "#bfdbfe",
-            300: "#93c5fd",
-            400: "#60a5fa",
-            500: "#3b82f6",
-            600: "#2563eb",
-            700: "#1d4ed8",
-            800: "#1e40af",
-            900: "#1e3a8a",
-          },
-          green: {
-            50: "#f0fdf4",
-            100: "#dcfce7",
-            200: "#bbf7d0",
-            300: "#86efac",
-            400: "#4ade80",
-            500: "#22c55e",
-            600: "#16a34a",
-            700: "#15803d",
-            800: "#166534",
-            900: "#145231",
+          slate: {
+            50: "#f8fafc",
+            100: "#f1f5f9",
+            200: "#e2e8f0",
+            300: "#cbd5e1",
+            400: "#94a3b8",
+            500: "#64748b",
+            600: "#475569",
+            700: "#334155",
+            800: "#1e293b",
+            900: "#0f172a",
+            950: "#020617",
           },
           gray: {
             50: "#f9fafb",
@@ -848,9 +960,270 @@
             700: "#374151",
             800: "#1f2937",
             900: "#111827",
+            950: "#030712",
           },
-          black: "#000",
-          white: "#fff",
+          zinc: {
+            50: "#fafafa",
+            100: "#f4f4f5",
+            200: "#e4e4e7",
+            300: "#d4d4d8",
+            400: "#a1a1aa",
+            500: "#71717a",
+            600: "#52525b",
+            700: "#3f3f46",
+            800: "#27272a",
+            900: "#18181b",
+            950: "#09090b",
+          },
+          neutral: {
+            50: "#fafafa",
+            100: "#f5f5f5",
+            200: "#e5e5e5",
+            300: "#d4d4d4",
+            400: "#a3a3a3",
+            500: "#737373",
+            600: "#525252",
+            700: "#404040",
+            800: "#262626",
+            900: "#171717",
+            950: "#0a0a0a",
+          },
+          stone: {
+            50: "#fafaf9",
+            100: "#f5f5f4",
+            200: "#e7e5e4",
+            300: "#d6d3d1",
+            400: "#a8a29e",
+            500: "#78716c",
+            600: "#57534e",
+            700: "#44403c",
+            800: "#292524",
+            900: "#1c1917",
+            950: "#0c0a09",
+          },
+          red: {
+            50: "#fef2f2",
+            100: "#fee2e2",
+            200: "#fecaca",
+            300: "#fca5a5",
+            400: "#f87171",
+            500: "#ef4444",
+            600: "#dc2626",
+            700: "#b91c1c",
+            800: "#991b1b",
+            900: "#7f1d1d",
+            950: "#450a0a",
+          },
+          orange: {
+            50: "#fff7ed",
+            100: "#ffedd5",
+            200: "#fed7aa",
+            300: "#fdba74",
+            400: "#fb923c",
+            500: "#f97316",
+            600: "#ea580c",
+            700: "#c2410c",
+            800: "#9a3412",
+            900: "#7c2d12",
+            950: "#431407",
+          },
+          amber: {
+            50: "#fffbeb",
+            100: "#fef3c7",
+            200: "#fde68a",
+            300: "#fcd34d",
+            400: "#fbbf24",
+            500: "#f59e0b",
+            600: "#d97706",
+            700: "#b45309",
+            800: "#92400e",
+            900: "#78350f",
+            950: "#451a03",
+          },
+          yellow: {
+            50: "#fefce8",
+            100: "#fef9c3",
+            200: "#fef08a",
+            300: "#fde047",
+            400: "#facc15",
+            500: "#eab308",
+            600: "#ca8a04",
+            700: "#a16207",
+            800: "#854d0e",
+            900: "#713f12",
+            950: "#422006",
+          },
+          lime: {
+            50: "#f7fee7",
+            100: "#ecfccb",
+            200: "#d9f99d",
+            300: "#bef264",
+            400: "#a3e635",
+            500: "#84cc16",
+            600: "#65a30d",
+            700: "#4d7c0f",
+            800: "#3f6212",
+            900: "#365314",
+            950: "#1a2e05",
+          },
+          green: {
+            50: "#f0fdf4",
+            100: "#dcfce7",
+            200: "#bbf7d0",
+            300: "#86efac",
+            400: "#4ade80",
+            500: "#22c55e",
+            600: "#16a34a",
+            700: "#15803d",
+            800: "#166534",
+            900: "#14532d",
+            950: "#052e16",
+          },
+          emerald: {
+            50: "#ecfdf5",
+            100: "#d1fae5",
+            200: "#a7f3d0",
+            300: "#6ee7b7",
+            400: "#34d399",
+            500: "#10b981",
+            600: "#059669",
+            700: "#047857",
+            800: "#065f46",
+            900: "#064e3b",
+            950: "#022c22",
+          },
+          teal: {
+            50: "#f0fdfa",
+            100: "#ccfbf1",
+            200: "#99f6e4",
+            300: "#5eead4",
+            400: "#2dd4bf",
+            500: "#14b8a6",
+            600: "#0d9488",
+            700: "#0f766e",
+            800: "#115e59",
+            900: "#134e4a",
+            950: "#042f2e",
+          },
+          cyan: {
+            50: "#ecfeff",
+            100: "#cffafe",
+            200: "#a5f3fc",
+            300: "#67e8f9",
+            400: "#22d3ee",
+            500: "#06b6d4",
+            600: "#0891b2",
+            700: "#0e7490",
+            800: "#155e75",
+            900: "#164e63",
+            950: "#083344",
+          },
+          sky: {
+            50: "#f0f9ff",
+            100: "#e0f2fe",
+            200: "#bae6fd",
+            300: "#7dd3fc",
+            400: "#38bdf8",
+            500: "#0ea5e9",
+            600: "#0284c7",
+            700: "#0369a1",
+            800: "#075985",
+            900: "#0c4a6e",
+            950: "#082f49",
+          },
+          blue: {
+            50: "#eff6ff",
+            100: "#dbeafe",
+            200: "#bfdbfe",
+            300: "#93c5fd",
+            400: "#60a5fa",
+            500: "#3b82f6",
+            600: "#2563eb",
+            700: "#1d4ed8",
+            800: "#1e40af",
+            900: "#1e3a8a",
+            950: "#172554",
+          },
+          indigo: {
+            50: "#eef2ff",
+            100: "#e0e7ff",
+            200: "#c7d2fe",
+            300: "#a5b4fc",
+            400: "#818cf8",
+            500: "#6366f1",
+            600: "#4f46e5",
+            700: "#4338ca",
+            800: "#3730a3",
+            900: "#312e81",
+            950: "#1e1b4b",
+          },
+          violet: {
+            50: "#f5f3ff",
+            100: "#ede9fe",
+            200: "#ddd6fe",
+            300: "#c4b5fd",
+            400: "#a78bfa",
+            500: "#8b5cf6",
+            600: "#7c3aed",
+            700: "#6d28d9",
+            800: "#5b21b6",
+            900: "#4c1d95",
+            950: "#2e1065",
+          },
+          purple: {
+            50: "#faf5ff",
+            100: "#f3e8ff",
+            200: "#e9d5ff",
+            300: "#d8b4fe",
+            400: "#c084fc",
+            500: "#a855f7",
+            600: "#9333ea",
+            700: "#7e22ce",
+            800: "#6b21a8",
+            900: "#581c87",
+            950: "#3b0764",
+          },
+          fuchsia: {
+            50: "#fdf4ff",
+            100: "#fae8ff",
+            200: "#f5d0fe",
+            300: "#f0abfc",
+            400: "#e879f9",
+            500: "#d946ef",
+            600: "#c026d3",
+            700: "#a21caf",
+            800: "#86198f",
+            900: "#701a75",
+            950: "#4a044e",
+          },
+          pink: {
+            50: "#fdf2f8",
+            100: "#fce7f3",
+            200: "#fbcfe8",
+            300: "#f9a8d4",
+            400: "#f472b6",
+            500: "#ec4899",
+            600: "#db2777",
+            700: "#be185d",
+            800: "#9d174d",
+            900: "#831843",
+            950: "#500724",
+          },
+          rose: {
+            50: "#fff1f2",
+            100: "#ffe4e6",
+            200: "#fecdd3",
+            300: "#fda4af",
+            400: "#fb7185",
+            500: "#f43f5e",
+            600: "#e11d48",
+            700: "#be123c",
+            800: "#9f1239",
+            900: "#881337",
+            950: "#4c0519",
+          },
+          black: "#000000",
+          white: "#ffffff",
         },
         spacing: {
           0: "0px",
@@ -973,9 +1346,208 @@
             "2xl": "40px",
             "3xl": "64px",
           },
+          shadow: {
+            none: "none",
+            sm: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+            DEFAULT:
+              "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+            md: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+            lg: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+            xl: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+            "2xl": "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+            inner: "inset 0 2px 4px 0 rgb(0 0 0 / 0.05)",
+          },
         },
         gradients: {},
       };
+
+      function inferTokenType(path) {
+        const [category, subcategory] = path;
+        if (category === "colors") return "color";
+        if (category === "spacing") return "dimension";
+        if (category === "typography") {
+          if (subcategory === "fontFamily") return "fontFamily";
+          if (subcategory === "fontWeight") return "fontWeight";
+          if (subcategory === "lineHeight") return "number";
+          return "dimension";
+        }
+        if (category === "effects") {
+          if (subcategory === "opacity") return "number";
+          if (subcategory === "shadow") return "shadow";
+          return "dimension";
+        }
+        if (category === "gradients") return "gradient";
+        return "string";
+      }
+
+      // Converts raw Tailwind token objects into W3C Design Token format
+      // Wraps string values with $value, $type, and $description metadata
+      function toW3CTokens(node, path = []) {
+        if (node && typeof node === "object" && !Array.isArray(node)) {
+          // Skip nodes that are already in W3C format
+          if ("$value" in node) return node;
+          // Recursively process object properties
+          const next = {};
+          Object.entries(node).forEach(([key, value]) => {
+            next[key] = toW3CTokens(value, [...path, key]);
+          });
+          return next;
+        }
+
+        if (typeof node === "string") {
+          // Wrap primitive string values in W3C format with inferred type and path-based description
+          return {
+            $value: node,
+            $type: inferTokenType(path),
+            $description: path.join("."),
+          };
+        }
+
+        return node;
+      }
+
+      // Checks if a token value is in W3C format with a $value property
+      function isTokenLeaf(value) {
+        return !!value && typeof value === "object" && "$value" in value;
+      }
+
+      // Extracts the actual value from a token, handling both W3C-wrapped and raw string formats
+      function tokenValue(value) {
+        if (value == null) return null;
+        if (typeof value === "string") return value;
+        if (isTokenLeaf(value)) return value.$value;
+        return null;
+      }
+
+      // Converts all raw Tailwind tokens to W3C Design Token Format 2025.10
+      const TAILWIND_TOKENS = toW3CTokens(RAW_TAILWIND_TOKENS);
+
+      // This function normalizes custom token names for safe keys.
+      function normalizeCustomTokenName(name) {
+        return String(name || "")
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+      }
+
+      // This function validates full 6-digit hex color values.
+      function isValidHexColor(hex) {
+        return /^#([a-f0-9]{6})$/i.test(String(hex || ""));
+      }
+
+      // This function injects custom color and gradient tokens into the active token registry.
+      function applyCustomTokensToRegistry() {
+        const colorGroup = {};
+        Object.entries(customColors).forEach(([name, hex]) => {
+          if (isValidHexColor(hex)) {
+            colorGroup[name] = {
+              $value: String(hex).toLowerCase(),
+              $type: "color",
+              $description: `custom.colors.${name}`,
+            };
+          }
+        });
+
+        if (Object.keys(colorGroup).length > 0) {
+          TAILWIND_TOKENS.colors.custom = colorGroup;
+        } else {
+          delete TAILWIND_TOKENS.colors.custom;
+        }
+
+        const gradients = {};
+        Object.entries(customGradients).forEach(([name, gradient]) => {
+          const stops = Array.isArray(gradient?.stops)
+            ? gradient.stops.filter(Boolean)
+            : [];
+          const fallbackStops = [gradient?.from, gradient?.to].filter(Boolean);
+          const gradientStops = stops.length >= 2 ? stops : fallbackStops;
+          if (gradientStops.length >= 2) {
+            gradients[name] = {
+              $value: `linear:${gradientStops.join(",")}`,
+              $type: "gradient",
+              $description: `custom.gradients.${name}`,
+            };
+          }
+        });
+
+        TAILWIND_TOKENS.gradients = gradients;
+      }
+
+      // This function requests persisted custom tokens from plugin storage.
+      function requestCustomTokensFromPlugin() {
+        parent.postMessage(
+          {
+            pluginMessage: {
+              type: "request-custom-tokens",
+            },
+          },
+          "*",
+        );
+      }
+
+      // This function sends a custom color token save request to plugin code.
+      function saveCustomColorToken(name, hex) {
+        parent.postMessage(
+          {
+            pluginMessage: {
+              type: "save-custom-color-token",
+              name,
+              hex,
+            },
+          },
+          "*",
+        );
+      }
+
+      // This function sends a custom gradient token save request to plugin code.
+      function saveCustomGradientToken(name, from, to, stops) {
+        parent.postMessage(
+          {
+            pluginMessage: {
+              type: "save-custom-gradient-token",
+              name,
+              from,
+              to,
+              stops,
+            },
+          },
+          "*",
+        );
+      }
+
+      // This function rebuilds the saved gradients dropdown from current custom state.
+      function renderSavedGradientOptions() {
+        const savedGradientSelect = document.getElementById(
+          "saved-gradient-select",
+        );
+        if (!savedGradientSelect) return;
+
+        savedGradientSelect.innerHTML =
+          '<option value="">-- Saved Gradients --</option>';
+        Object.keys(customGradients)
+          .sort()
+          .forEach((name) => {
+            const option = document.createElement("option");
+            option.value = name;
+            option.textContent = name;
+            savedGradientSelect.appendChild(option);
+          });
+      }
+
+      requestCustomTokensFromPlugin();
+
+      // Determines if token parts match the current search query
+      // Checks if any part (name, shade, value) contains the query substring (case-insensitive)
+      function matchesTokenSearch(...parts) {
+        const query = tokenSearchQuery.trim().toLowerCase();
+        if (!query) return true;
+        return parts.some((part) =>
+          String(part ?? "")
+            .toLowerCase()
+            .includes(query),
+        );
+      }
 
       let currentTokenCategory = "colors";
 
@@ -1032,26 +1604,136 @@
         if (currentTokenCategory === "gradients") {
           const fromSelect = document.getElementById("gradient-from-select");
           const toSelect = document.getElementById("gradient-to-select");
+          const extraStopsContainer = document.getElementById(
+            "gradient-extra-stops",
+          );
+          const addStopBtn = document.getElementById("gradient-add-stop-btn");
+          const customColorNameInput =
+            document.getElementById("custom-color-name");
+          const customColorValueInput =
+            document.getElementById("custom-color-value");
+          const saveCustomColorBtn = document.getElementById(
+            "save-custom-color-btn",
+          );
+          const customGradientNameInput = document.getElementById(
+            "custom-gradient-name",
+          );
+          const saveCustomGradientBtn = document.getElementById(
+            "save-custom-gradient-btn",
+          );
+          const savedGradientSelect = document.getElementById(
+            "saved-gradient-select",
+          );
+          const applySavedGradientBtn = document.getElementById(
+            "apply-saved-gradient-btn",
+          );
+
+          const getAllGradientSelects = () => {
+            const extraSelects = extraStopsContainer
+              ? Array.from(
+                  extraStopsContainer.querySelectorAll(
+                    'select[data-gradient-stop="extra"]',
+                  ),
+                )
+              : [];
+            return [fromSelect, toSelect, ...extraSelects].filter(Boolean);
+          };
 
           const populateColorOptions = (selectEl) => {
             if (!selectEl) return;
             selectEl.innerHTML = '<option value="">-- Select Color --</option>';
             const colors = TAILWIND_TOKENS.colors;
             Object.entries(colors).forEach(([colorName, shades]) => {
-              if (typeof shades === "object") {
-                Object.entries(shades).forEach(([shade]) => {
+              if (
+                shades &&
+                typeof shades === "object" &&
+                !isTokenLeaf(shades)
+              ) {
+                Object.entries(shades).forEach(([shade, hexToken]) => {
+                  const hex = tokenValue(hexToken);
+                  if (typeof hex !== "string") return;
                   const optionValue = `${colorName}-${shade}`;
+                  if (!matchesTokenSearch(optionValue, colorName, shade, hex)) {
+                    return;
+                  }
                   const option = document.createElement("option");
                   option.value = optionValue;
                   option.textContent = optionValue;
+                  option.style.backgroundColor = hex;
+                  option.style.color = getReadableTextColor(hex);
                   selectEl.appendChild(option);
                 });
+              } else {
+                const simpleColor = tokenValue(shades);
+                if (typeof simpleColor !== "string") return;
+                if (!matchesTokenSearch(colorName, simpleColor)) {
+                  return;
+                }
+                const option = document.createElement("option");
+                option.value = simpleColor;
+                option.textContent = colorName;
+                option.style.backgroundColor = simpleColor;
+                option.style.color = getReadableTextColor(simpleColor);
+                selectEl.appendChild(option);
               }
             });
           };
 
-          populateColorOptions(fromSelect);
-          populateColorOptions(toSelect);
+          const refreshGradientSelectOptions = () => {
+            getAllGradientSelects().forEach((selectEl) => {
+              const previousValue = selectEl.value;
+              populateColorOptions(selectEl);
+              if (
+                previousValue &&
+                Array.from(selectEl.options).some(
+                  (option) => option.value === previousValue,
+                )
+              ) {
+                selectEl.value = previousValue;
+              }
+            });
+          };
+
+          const createExtraGradientStopSelect = (initialValue = "") => {
+            if (!extraStopsContainer) return;
+
+            const row = document.createElement("div");
+            row.className = "gradient-stop-row";
+
+            const selectEl = document.createElement("select");
+            selectEl.setAttribute("data-gradient-stop", "extra");
+            selectEl.style.flex = "1";
+
+            const removeBtn = document.createElement("button");
+            removeBtn.type = "button";
+            removeBtn.className = "button muted";
+            removeBtn.textContent = "Remove";
+            removeBtn.onclick = () => {
+              row.remove();
+            };
+
+            row.appendChild(selectEl);
+            row.appendChild(removeBtn);
+            extraStopsContainer.appendChild(row);
+
+            populateColorOptions(selectEl);
+            if (
+              initialValue &&
+              Array.from(selectEl.options).some(
+                (option) => option.value === initialValue,
+              )
+            ) {
+              selectEl.value = initialValue;
+            }
+          };
+
+          refreshGradientSelectOptions();
+
+          if (addStopBtn) {
+            addStopBtn.onclick = () => {
+              createExtraGradientStopSelect();
+            };
+          }
 
           const applyBtn = document.getElementById("gradient-apply-btn");
           if (applyBtn) {
@@ -1060,10 +1742,12 @@
                 console.log("No node selected");
                 return;
               }
-              const fromValue = fromSelect?.value || "";
-              const toValue = toSelect?.value || "";
-              if (!fromValue || !toValue) {
-                console.log("Select both gradient colors");
+              const colors = getAllGradientSelects()
+                .map((selectEl) => selectEl.value)
+                .filter(Boolean);
+
+              if (colors.length < 2) {
+                console.log("Select at least two gradient colors");
                 return;
               }
 
@@ -1072,13 +1756,110 @@
                   pluginMessage: {
                     type: "apply-gradient-token",
                     nodeId: currentNodeId,
-                    colors: [fromValue, toValue],
+                    colors,
                   },
                 },
                 "*",
               );
             };
           }
+
+          if (saveCustomColorBtn) {
+            saveCustomColorBtn.onclick = () => {
+              // This handler validates and saves a custom color token.
+              const normalizedName = normalizeCustomTokenName(
+                customColorNameInput?.value,
+              );
+              const hexColor = String(customColorValueInput?.value || "");
+
+              if (!normalizedName) {
+                console.log("Enter a custom color name");
+                return;
+              }
+              if (!isValidHexColor(hexColor)) {
+                console.log("Invalid color hex");
+                return;
+              }
+
+              customColors[normalizedName] = hexColor.toLowerCase();
+              saveCustomColorToken(normalizedName, hexColor.toLowerCase());
+              if (customColorNameInput) customColorNameInput.value = "";
+            };
+          }
+
+          if (saveCustomGradientBtn) {
+            saveCustomGradientBtn.onclick = () => {
+              // This handler validates and saves a custom gradient token.
+              const normalizedName = normalizeCustomTokenName(
+                customGradientNameInput?.value,
+              );
+              const colors = getAllGradientSelects()
+                .map((selectEl) => selectEl.value)
+                .filter(Boolean);
+              const fromValue = colors[0] || "";
+              const toValue = colors[colors.length - 1] || "";
+
+              if (!normalizedName) {
+                console.log("Enter a custom gradient name");
+                return;
+              }
+              if (colors.length < 2 || !fromValue || !toValue) {
+                console.log("Select at least two gradient colors");
+                return;
+              }
+
+              customGradients[normalizedName] = {
+                from: fromValue,
+                to: toValue,
+                stops: colors,
+              };
+              saveCustomGradientToken(
+                normalizedName,
+                fromValue,
+                toValue,
+                colors,
+              );
+              if (customGradientNameInput) customGradientNameInput.value = "";
+            };
+          }
+
+          if (applySavedGradientBtn) {
+            applySavedGradientBtn.onclick = () => {
+              // This handler applies a saved gradient token to the selected node.
+              if (!currentNodeId) {
+                console.log("No node selected");
+                return;
+              }
+
+              const selectedName = savedGradientSelect?.value || "";
+              if (!selectedName || !customGradients[selectedName]) {
+                console.log("Select a saved gradient");
+                return;
+              }
+
+              const savedGradient = customGradients[selectedName];
+              const savedStops = Array.isArray(savedGradient.stops)
+                ? savedGradient.stops.filter(Boolean)
+                : [];
+              const colorsToApply =
+                savedStops.length >= 2
+                  ? savedStops
+                  : [savedGradient.from, savedGradient.to].filter(Boolean);
+
+              parent.postMessage(
+                {
+                  pluginMessage: {
+                    type: "apply-gradient-token",
+                    nodeId: currentNodeId,
+                    colors: colorsToApply,
+                  },
+                },
+                "*",
+              );
+            };
+          }
+
+          renderSavedGradientOptions();
         }
 
         const categoryTokens = TAILWIND_TOKENS[currentTokenCategory];
@@ -1089,7 +1870,7 @@
         const isEffectsCategory = currentTokenCategory === "effects";
         const isGradientCategory = currentTokenCategory === "gradients";
 
-        if (typeof categoryTokens !== "object") {
+        if (isTokenLeaf(categoryTokens) || typeof categoryTokens !== "object") {
           const singleRow = document.createElement("div");
           singleRow.className = "token-shade";
           const label = document.createElement("div");
@@ -1097,7 +1878,9 @@
           label.textContent = currentTokenCategory;
           const value = document.createElement("div");
           value.className = "token-shade-value";
-          value.textContent = String(categoryTokens);
+          value.textContent = String(
+            tokenValue(categoryTokens) ?? categoryTokens,
+          );
           singleRow.appendChild(label);
           singleRow.appendChild(value);
           tokenTree.appendChild(singleRow);
@@ -1106,8 +1889,12 @@
 
         const flatTokens = [];
 
-        Object.entries(categoryTokens).forEach(([tokenName, tokenValue]) => {
-          if (tokenValue && typeof tokenValue === "object") {
+        Object.entries(categoryTokens).forEach(([tokenName, tokenEntry]) => {
+          if (
+            tokenEntry &&
+            typeof tokenEntry === "object" &&
+            !isTokenLeaf(tokenEntry)
+          ) {
             const group = document.createElement("div");
             group.className = "token-color-group";
 
@@ -1118,8 +1905,14 @@
 
             const shadesContainer = document.createElement("div");
             shadesContainer.className = "token-shades";
+            let visibleShadeCount = 0;
 
-            Object.entries(tokenValue).forEach(([shade, value]) => {
+            Object.entries(tokenEntry).forEach(([shade, shadeEntry]) => {
+              const shadeValue = tokenValue(shadeEntry);
+              if (shadeValue === null) return;
+              if (!matchesTokenSearch(tokenName, shade, shadeValue)) {
+                return;
+              }
               const shadeEl = document.createElement("div");
               shadeEl.className = "token-shade";
 
@@ -1129,11 +1922,16 @@
 
               const valueEl = document.createElement("div");
               valueEl.className = "token-shade-value";
-              valueEl.textContent = value;
+              if (isEffectsCategory && tokenName === "shadow") {
+                valueEl.textContent = "preset";
+                valueEl.title = String(shadeValue);
+              } else {
+                valueEl.textContent = String(shadeValue);
+              }
 
               // Apply background color to the entire row for color tokens
               if (isColorCategory) {
-                shadeEl.style.backgroundColor = value;
+                shadeEl.style.backgroundColor = String(shadeValue);
                 // Set text color based on brightness for readability
                 const textColor =
                   parseInt(shade) >= 500 ? "#ffffff" : "#000000";
@@ -1154,6 +1952,22 @@
                   const colorProperty =
                     document.getElementById("color-property-select")?.value ||
                     "fill";
+
+                  if (tokenName === "custom") {
+                    parent.postMessage(
+                      {
+                        pluginMessage: {
+                          type: "apply-custom-color",
+                          nodeId: currentNodeId,
+                          colorHex: String(shadeValue),
+                          colorName: shade,
+                          property: colorProperty,
+                        },
+                      },
+                      "*",
+                    );
+                    return;
+                  }
 
                   parent.postMessage(
                     {
@@ -1203,15 +2017,16 @@
                     tokenName: shade,
                   };
 
-                  // Add extra options based on effect type
                   if (tokenName === "borderWidth") {
                     const strokePosition =
                       document.getElementById("stroke-position-select")
                         ?.value || "CENTER";
                     Object.assign(payload, { strokePosition });
                   } else if (tokenName === "blur") {
-                    // Blur simplified - no type selector needed
-                    Object.assign(payload, { blurType: "LAYER_BLUR" });
+                    const blurType =
+                      document.getElementById("blur-type-select")?.value ||
+                      "LAYER_BLUR";
+                    Object.assign(payload, { blurType });
                   }
 
                   parent.postMessage(
@@ -1224,12 +2039,21 @@
               }
 
               shadesContainer.appendChild(shadeEl);
+              visibleShadeCount += 1;
             });
+
+            if (visibleShadeCount === 0) {
+              return;
+            }
 
             group.appendChild(shadesContainer);
             tokenTree.appendChild(group);
           } else {
-            flatTokens.push({ name: tokenName, value: tokenValue });
+            const flatValue = tokenValue(tokenEntry);
+            if (!matchesTokenSearch(tokenName, flatValue)) {
+              return;
+            }
+            flatTokens.push({ name: tokenName, value: flatValue });
           }
         });
 
@@ -1252,7 +2076,9 @@
             if (isColorCategory) {
               const swatch = document.createElement("div");
               swatch.className = "token-swatch";
-              swatch.style.backgroundColor = token.value;
+              if (typeof token.value === "string") {
+                swatch.style.backgroundColor = token.value;
+              }
               row.appendChild(swatch);
             }
             if (isGradientCategory) {
@@ -1274,7 +2100,7 @@
 
             const value = document.createElement("div");
             value.className = "token-shade-value";
-            value.textContent = token.value;
+            value.textContent = String(token.value ?? "");
 
             row.appendChild(label);
             row.appendChild(value);
@@ -1345,7 +2171,6 @@
               });
             } else if (currentTokenCategory === "typography") {
               // For typography, token.name is the subcategory (fontSize, fontFamily, etc.)
-              // We need to handle this differently - show subcategories instead
             }
 
             rows.appendChild(row);
@@ -1354,6 +2179,22 @@
           group.appendChild(rows);
           tokenTree.appendChild(group);
         }
+
+        if (!tokenTree.hasChildNodes()) {
+          const empty = document.createElement("div");
+          empty.className = "property-value";
+          empty.textContent = "No matching tokens";
+          tokenTree.appendChild(empty);
+        }
+      }
+
+      // Syncs search input to live token tree filtering
+      // Updates tokenSearchQuery and rerenders the token browser whenever the search input changes
+      if (tokenSearchInput) {
+        tokenSearchInput.addEventListener("input", () => {
+          tokenSearchQuery = tokenSearchInput.value || "";
+          renderTokenTree();
+        });
       }
 
       /* === Render Functions === */
@@ -1576,6 +2417,17 @@
           .toString(16)
           .padStart(2, "0");
         return `#${r}${g}${b}`;
+      }
+
+      function getReadableTextColor(hex) {
+        if (!hex || typeof hex !== "string") return "#111827";
+        const cleaned = hex.replace("#", "");
+        if (cleaned.length !== 6) return "#111827";
+        const r = parseInt(cleaned.slice(0, 2), 16);
+        const g = parseInt(cleaned.slice(2, 4), 16);
+        const b = parseInt(cleaned.slice(4, 6), 16);
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return luminance > 0.6 ? "#111827" : "#ffffff";
       }
 
       function renderSwatches(data) {
@@ -1853,7 +2705,24 @@
 
         if (message.type === "selection-update") updateSelection(message);
         if (message.type === "no-selection") clearSelection();
+        if (message.type === "custom-tokens-update") {
+          // This branch updates local custom token state from plugin storage data.
+          customColors =
+            message.colors && typeof message.colors === "object"
+              ? message.colors
+              : {};
+          customGradients =
+            message.gradients && typeof message.gradients === "object"
+              ? message.gradients
+              : {};
+          applyCustomTokensToRegistry();
+          renderSavedGradientOptions();
+          renderTokenTabs();
+          renderTokenTree();
+        }
       };
+
+      requestCustomTokensFromPlugin();
     </script>
   </body>
 </html>
