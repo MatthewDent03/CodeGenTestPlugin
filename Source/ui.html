@@ -1,0 +1,2799 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Simple HTML Codegen</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      /* === Base Styles === */
+      body {
+        margin: 0;
+        padding: 16px;
+        background: #f4f6fb;
+        color: #1f2937;
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Arial;
+      }
+
+      /* === Panel Layout === */
+      .panel {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 18px;
+        margin-bottom: 16px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 6px;
+      }
+
+      .panel-title-group {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .popout-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+      /* === Typography === */
+      .title {
+        font-size: 18px;
+        font-weight: 650;
+        margin: 0 0 10px;
+      }
+
+      .subtitle {
+        font-size: 12.5px;
+        color: #6b7280;
+        margin: 0 0 10px;
+      }
+
+      /* === Properties List === */
+      .properties {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      /* === Individual property row with key-value pair === */
+      .property-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #f9fafb;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      }
+
+      .property-key {
+        min-width: 130px;
+        color: #6b7280;
+        font-size: 13px;
+      }
+
+      .property-value {
+        font-size: 13px;
+        word-break: break-word;
+      }
+
+      .property-input {
+        width: 100%;
+        padding: 6px 8px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        background: #ffffff;
+        color: #1f2937;
+        font-size: 13px;
+      }
+
+      .property-input:focus {
+        outline: none;
+        border-color: #2563eb;
+      }
+
+      .property-subgrid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        width: 100%;
+      }
+
+      .property-subfield {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .property-subfield label {
+        font-size: 11px;
+        color: #6b7280;
+      }
+
+      /* === Tabs & Buttons === */
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+      }
+
+      /* === button styling === */
+      .button {
+        padding: 8px 12px;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        background: #ffffff;
+        color: #1f2937;
+        cursor: pointer;
+        font-size: 13px;
+        transition:
+          background 0.2s ease,
+          border-color 0.2s ease;
+      }
+
+      .button:hover {
+        background: #f3f4f6;
+      }
+
+      .button.active {
+        border-color: #2563eb;
+        color: #2563eb;
+        background: rgba(37, 99, 235, 0.1);
+      }
+
+      .button.muted {
+        color: #6b7280;
+      }
+
+      /* === Code Output Display === */
+      pre {
+        margin: 0;
+        padding: 14px 16px;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        background: #f9fafb;
+        overflow: visible;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 13px;
+        line-height: 20px;
+        tab-size: 2;
+        color: #1f2937;
+      }
+
+      /* === buttons container (Copy, Download) === */
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      /* === Color Swatches === */
+      /* === Container for color chips === */
+      .swatches {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      /* === Individual color swatch item === */
+      .swatch {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 8px 10px;
+        background: #f9fafb;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      }
+
+      .swatch-color {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+      }
+
+      .swatch-labels {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .swatch-name {
+        font-size: 12px;
+        color: #6b7280;
+      }
+
+      .swatch-value {
+        font-size: 12px;
+        color: #1f2937;
+      }
+
+      /* === Child Fills === */
+      .child-fills {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .child-fill-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 8px 10px;
+        background: #f9fafb;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      }
+
+      .child-fill-name {
+        min-width: 120px;
+        font-size: 12px;
+        color: #6b7280;
+      }
+
+      .child-fill-swatch {
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        border: 1px solid #e5e7eb;
+        flex-shrink: 0;
+      }
+
+      /* === Collapsible (W3Schools) === */
+      .collapsible {
+        background-color: transparent;
+        color: #1f2937;
+        cursor: pointer;
+        padding: 12px 14px;
+        width: 100%;
+        border: none;
+        text-align: left;
+        outline: none;
+        font-size: 14px;
+        font-weight: 600;
+        transition: 0.4s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 10px;
+      }
+
+      .active,
+      .collapsible:hover {
+        background-color: #f3f4f6;
+      }
+
+      .collapsible:after {
+        content: "\002B";
+        color: #6b7280;
+        font-weight: bold;
+        margin-left: auto;
+      }
+
+      .active:after {
+        content: "\2212";
+      }
+
+      .content {
+        padding: 0 14px;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.2s ease-out;
+        background-color: transparent;
+      }
+
+      .content.open {
+        padding: 8px 14px 12px;
+      }
+
+      /* === Token Tabs and Tree === */
+      .token-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: thin;
+        scrollbar-color: #d1d5db #f3f4f6;
+      }
+
+      .token-tabs::-webkit-scrollbar {
+        height: 6px;
+      }
+
+      .token-tabs::-webkit-scrollbar-track {
+        background: #f3f4f6;
+      }
+
+      .token-tabs::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 3px;
+      }
+
+      .token-tabs::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
+      }
+
+      .token-tab {
+        padding: 8px 12px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        font-size: 13px;
+        color: #6b7280;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .token-tab.active {
+        color: #1f2937;
+        border-bottom-color: #3b82f6;
+        font-weight: 600;
+      }
+
+      .token-tree {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 250px;
+        overflow-y: auto;
+      }
+
+      .token-search {
+        margin-bottom: 10px;
+      }
+
+      .token-search input {
+        width: 100%;
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid #d1d5db;
+        background: #ffffff;
+        color: #1f2937;
+        font-size: 12px;
+      }
+
+      .token-search input:focus {
+        outline: none;
+        border-color: #9ca3af;
+      }
+
+      .custom-token-controls {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #d1d5db;
+        display: grid;
+        gap: 6px;
+      }
+
+      .custom-token-row {
+        display: flex;
+        gap: 6px;
+      }
+
+      .custom-token-row input,
+      .custom-token-row select {
+        flex: 1;
+        min-width: 0;
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid #d1d5db;
+        background: #ffffff;
+        color: #1f2937;
+        font-size: 12px;
+      }
+
+      .custom-token-row input[type="color"] {
+        flex: 0 0 40px;
+        padding: 2px;
+        cursor: pointer;
+      }
+
+      .token-color-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .token-color-name {
+        font-size: 12px;
+        font-weight: 600;
+        color: #374151;
+        padding: 4px 8px;
+        background: #f3f4f6;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      .token-color-name:hover {
+        background: #e5e7eb;
+      }
+
+      .token-shades {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-left: 8px;
+      }
+
+      .token-shade {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .token-shade:hover {
+        background: #f3f4f6;
+        border-color: #d1d5db;
+      }
+
+      .token-swatch {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        border: 1px solid #d1d5db;
+        flex-shrink: 0;
+      }
+
+      .token-shade-label {
+        font-size: 11px;
+        color: #6b7280;
+        flex-grow: 1;
+      }
+
+      /* === Spacing Property Selector === */
+      .spacing-property-selector {
+        margin-bottom: 12px;
+        padding: 10px 12px;
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        border-radius: 8px;
+      }
+
+      .spacing-property-selector label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: #0369a1;
+        margin-bottom: 6px;
+      }
+
+      .spacing-property-selector select {
+        width: 100%;
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid #bae6fd;
+        background: #ffffff;
+        color: #1f2937;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .spacing-property-selector select:focus {
+        outline: none;
+        border-color: #0284c7;
+      }
+
+      /* === Effects Property Selector === */
+      .effects-property-selector {
+        margin-bottom: 12px;
+        padding: 10px 12px;
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        max-height: 280px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #9ca3af #e5e7eb;
+      }
+
+      .effects-property-selector::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .effects-property-selector::-webkit-scrollbar-track {
+        background: #e5e7eb;
+      }
+
+      .effects-property-selector::-webkit-scrollbar-thumb {
+        background: #9ca3af;
+        border-radius: 3px;
+      }
+
+      .effects-property-selector::-webkit-scrollbar-thumb:hover {
+        background: #6b7280;
+      }
+
+      .effects-property-selector label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 6px;
+      }
+
+      .effects-property-selector select {
+        width: 100%;
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid #d1d5db;
+        background: #ffffff;
+        color: #1f2937;
+        font-size: 12px;
+        cursor: pointer;
+        margin-bottom: 6px;
+      }
+
+      /* Style for stroke color select to better display color swatches */
+      #stroke-color-select {
+        padding: 8px;
+        line-height: 1.6;
+      }
+
+      #stroke-color-select option {
+        padding: 6px;
+        line-height: 1.6;
+      }
+
+      .effects-property-selector select:focus {
+        outline: none;
+        border-color: #6b7280;
+      }
+
+      .token-shade-value {
+        font-size: 11px;
+        color: #1f2937;
+        font-family: monospace;
+        font-weight: 600;
+        max-width: 170px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .gradient-stop-row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-top: 6px;
+      }
+
+      .gradient-stop-row button {
+        flex-shrink: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <p class="title">Simple HTML Codegen</p>
+          <p class="subtitle">Selected Frame</p>
+        </div>
+        <button class="button popout-btn" id="popout-btn">Pop out</button>
+      </div>
+      <div id="frame-name">No selection</div>
+    </div>
+
+    <div class="panel">
+      <button type="button" class="collapsible">Editable Fields</button>
+      <div class="content">
+        <div id="properties" class="properties" aria-live="polite"></div>
+        <div class="subtitle" style="margin-top: 14px">Child Fills</div>
+        <div id="child-fills" class="child-fills" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <button type="button" class="collapsible">Color Swatches</button>
+      <div class="content">
+        <div id="color-swatches" class="swatches" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <button type="button" class="collapsible">Tailwind Color Tokens</button>
+      <div class="content">
+        <div class="token-tabs" id="token-tabs"></div>
+        <div class="token-search">
+          <input
+            id="token-search-input"
+            type="text"
+            placeholder="Search tokens..."
+          />
+        </div>
+        <div
+          class="spacing-property-selector"
+          id="spacing-property-selector"
+          style="display: none"
+        >
+          <label for="spacing-property-select">Apply spacing token to:</label>
+          <select id="spacing-property-select">
+            <option value="padding">Padding (All Sides)</option>
+            <option value="paddingTop">Padding Top</option>
+            <option value="paddingRight">Padding Right</option>
+            <option value="paddingBottom">Padding Bottom</option>
+            <option value="paddingLeft">Padding Left</option>
+            <option value="itemSpacing">Gap (Item Spacing)</option>
+            <option value="width">Width</option>
+            <option value="height">Height</option>
+            <option value="cornerRadius">Corner Radius (All Corners)</option>
+            <option value="topLeftRadius">Top Left Radius</option>
+            <option value="topRightRadius">Top Right Radius</option>
+            <option value="bottomRightRadius">Bottom Right Radius</option>
+            <option value="bottomLeftRadius">Bottom Left Radius</option>
+          </select>
+        </div>
+        <div
+          class="color-property-selector"
+          id="color-property-selector"
+          style="
+            display: none;
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            background: #dbeafe;
+            border: 1px solid #60a5fa;
+            border-radius: 8px;
+          "
+        >
+          <label
+            for="color-property-select"
+            style="
+              display: block;
+              font-size: 12px;
+              font-weight: 600;
+              color: #1e3a8a;
+              margin-bottom: 6px;
+            "
+            >Apply color token to:</label
+          >
+          <select
+            id="color-property-select"
+            style="
+              width: 100%;
+              padding: 6px 8px;
+              border-radius: 6px;
+              border: 1px solid #60a5fa;
+              background: #ffffff;
+              color: #1f2937;
+              font-size: 12px;
+              cursor: pointer;
+            "
+          >
+            <option value="fill">Fill</option>
+            <option value="stroke">Stroke</option>
+          </select>
+        </div>
+        <div
+          class="effects-property-selector"
+          id="effects-property-selector"
+          style="display: none"
+        >
+          <label for="stroke-position-select">Stroke Position:</label>
+          <select id="stroke-position-select">
+            <option value="CENTER">Center</option>
+            <option value="INSIDE">Inside</option>
+            <option value="OUTSIDE">Outside</option>
+          </select>
+
+          <label for="blur-type-select">Blur Type:</label>
+          <select id="blur-type-select">
+            <option value="LAYER_BLUR">Layer Blur</option>
+            <option value="BACKGROUND_BLUR">Background Blur</option>
+          </select>
+        </div>
+        <div
+          class="effects-property-selector"
+          id="gradient-selector"
+          style="display: none"
+        >
+          <label for="gradient-from-select">Gradient From:</label>
+          <select id="gradient-from-select">
+            <option value="">-- Select Color --</option>
+          </select>
+
+          <label
+            for="gradient-to-select"
+            style="margin-top: 6px; display: block"
+            >Gradient To:</label
+          >
+          <select id="gradient-to-select">
+            <option value="">-- Select Color --</option>
+          </select>
+
+          <div id="gradient-extra-stops"></div>
+
+          <button
+            type="button"
+            id="gradient-add-stop-btn"
+            class="button muted"
+            style="margin-top: 6px; width: 100%"
+          >
+            + Add Another Color Stop
+          </button>
+
+          <button
+            type="button"
+            id="gradient-apply-btn"
+            class="button"
+            style="margin-top: 8px; width: 100%"
+          >
+            Apply Gradient
+          </button>
+
+          <div class="custom-token-controls">
+            <div class="custom-token-row">
+              <input
+                id="custom-color-name"
+                type="text"
+                placeholder="Custom color name"
+              />
+              <input id="custom-color-value" type="color" value="#3b82f6" />
+              <button type="button" id="save-custom-color-btn" class="button">
+                Save Color
+              </button>
+            </div>
+
+            <div class="custom-token-row">
+              <input
+                id="custom-gradient-name"
+                type="text"
+                placeholder="Custom gradient name"
+              />
+              <button
+                type="button"
+                id="save-custom-gradient-btn"
+                class="button"
+              >
+                Save Gradient
+              </button>
+            </div>
+
+            <div class="custom-token-row">
+              <select id="saved-gradient-select">
+                <option value="">-- Saved Gradients --</option>
+              </select>
+              <button
+                type="button"
+                id="apply-saved-gradient-btn"
+                class="button"
+              >
+                Apply Saved
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="token-tree" id="token-tree"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <button type="button" class="collapsible">Live Code Preview</button>
+      <div class="content">
+        <div class="tabs">
+          <button class="button active" id="tab-html">HTML + CSS</button>
+          <button class="button" id="tab-tailwind">HTML + Tailwind</button>
+        </div>
+        <pre id="code-output" aria-live="polite"></pre>
+        <div class="actions">
+          <button class="button" id="copy-btn">Copy</button>
+          <button class="button muted" id="download-btn">Download</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      /* === DOM Elements === */
+      const frameName = document.getElementById("frame-name");
+      const properties = document.getElementById("properties");
+      const colorSwatches = document.getElementById("color-swatches");
+      const childFills = document.getElementById("child-fills");
+      const tokenTabs = document.getElementById("token-tabs");
+      const tokenSearchInput = document.getElementById("token-search-input");
+      const tokenTree = document.getElementById("token-tree");
+      const codeOutput = document.getElementById("code-output");
+      const tabHtml = document.getElementById("tab-html");
+      const tabTailwind = document.getElementById("tab-tailwind");
+      const copyButton = document.getElementById("copy-btn");
+      const downloadButton = document.getElementById("download-btn");
+      const popoutButton = document.getElementById("popout-btn");
+
+      /* === App State === */
+      /* Tracks current mode (html/tailwind) and generated code */
+      const appState = {
+        mode: "html",
+        html: "",
+        tailwind: "",
+      };
+
+      let isPoppedOut = false;
+      let currentNodeId = null;
+      let tokenSearchQuery = "";
+      let customColors = {};
+      let customGradients = {};
+      let availableFontFamilies = [];
+
+      const editableConfig = {
+        x: { type: "number" },
+        y: { type: "number" },
+        width: { type: "number" },
+        height: { type: "number" },
+        rotation: { type: "number" },
+        opacity: { type: "number", min: 0, max: 1, step: 0.01 },
+        cornerRadius: {
+          type: "number",
+          getValue: (value) =>
+            value && typeof value.all === "number" ? value.all : null,
+          allowMixed: true,
+        },
+        padding: {
+          type: "number",
+          getValue: (value) => {
+            if (typeof value === "number") return value;
+            if (!value || typeof value !== "object") return null;
+            const { top = 0, right = 0, bottom = 0, left = 0 } = value;
+            return top === right && right === bottom && bottom === left
+              ? top
+              : null;
+          },
+          allowMixed: true,
+        },
+        itemSpacing: { type: "number" },
+        layoutGrow: { type: "number" },
+        fontSize: { type: "number" },
+        characters: { type: "text" },
+        name: { type: "text" },
+        fill: { type: "text" },
+        stroke: {
+          type: "text",
+          getValue: (value) => (value && value.color ? value.color : ""),
+        },
+        strokeWeight: { type: "number" },
+        strokeAlign: { type: "text" },
+        layoutAlign: { type: "text" },
+      };
+
+      /* === Property Order === */
+      /* Defines preferred order for displaying properties  */
+      const propertyOrder = [
+        "id",
+        "name",
+        "type",
+        "width",
+        "height",
+        "x",
+        "y",
+        "rotation",
+        "layoutMode",
+        "itemSpacing",
+        "gap",
+        "padding",
+        "cornerRadius",
+        "fill",
+        "stroke",
+        "strokeWeight",
+        "strokeAlign",
+        "layoutGrow",
+        "layoutAlign",
+        "fontSize",
+        "fontName",
+        "characters",
+        "textAlignHorizontal",
+        "fills",
+        "strokes",
+      ];
+
+      const propertyLabels = {
+        itemSpacing: "Gap",
+      };
+
+      /* === Utility Functions === */
+      /* Convert any value to displayable string, handling objects and nulls */
+      function toDisplayValue(value) {
+        if (value === undefined || value === null) return "—";
+        if (typeof value === "string" || typeof value === "number") {
+          return String(value);
+        }
+        return JSON.stringify(value);
+      }
+
+      /* Return the current code based on selected mode */
+      function getCodeForMode() {
+        return appState.mode === "html" ? appState.html : appState.tailwind;
+      }
+
+      /* === Tailwind Token Registry (raw values) === */
+      const RAW_TAILWIND_TOKENS = {
+        colors: {
+          slate: {
+            50: "#f8fafc",
+            100: "#f1f5f9",
+            200: "#e2e8f0",
+            300: "#cbd5e1",
+            400: "#94a3b8",
+            500: "#64748b",
+            600: "#475569",
+            700: "#334155",
+            800: "#1e293b",
+            900: "#0f172a",
+            950: "#020617",
+          },
+          gray: {
+            50: "#f9fafb",
+            100: "#f3f4f6",
+            200: "#e5e7eb",
+            300: "#d1d5db",
+            400: "#9ca3af",
+            500: "#6b7280",
+            600: "#4b5563",
+            700: "#374151",
+            800: "#1f2937",
+            900: "#111827",
+            950: "#030712",
+          },
+          zinc: {
+            50: "#fafafa",
+            100: "#f4f4f5",
+            200: "#e4e4e7",
+            300: "#d4d4d8",
+            400: "#a1a1aa",
+            500: "#71717a",
+            600: "#52525b",
+            700: "#3f3f46",
+            800: "#27272a",
+            900: "#18181b",
+            950: "#09090b",
+          },
+          neutral: {
+            50: "#fafafa",
+            100: "#f5f5f5",
+            200: "#e5e5e5",
+            300: "#d4d4d4",
+            400: "#a3a3a3",
+            500: "#737373",
+            600: "#525252",
+            700: "#404040",
+            800: "#262626",
+            900: "#171717",
+            950: "#0a0a0a",
+          },
+          stone: {
+            50: "#fafaf9",
+            100: "#f5f5f4",
+            200: "#e7e5e4",
+            300: "#d6d3d1",
+            400: "#a8a29e",
+            500: "#78716c",
+            600: "#57534e",
+            700: "#44403c",
+            800: "#292524",
+            900: "#1c1917",
+            950: "#0c0a09",
+          },
+          red: {
+            50: "#fef2f2",
+            100: "#fee2e2",
+            200: "#fecaca",
+            300: "#fca5a5",
+            400: "#f87171",
+            500: "#ef4444",
+            600: "#dc2626",
+            700: "#b91c1c",
+            800: "#991b1b",
+            900: "#7f1d1d",
+            950: "#450a0a",
+          },
+          orange: {
+            50: "#fff7ed",
+            100: "#ffedd5",
+            200: "#fed7aa",
+            300: "#fdba74",
+            400: "#fb923c",
+            500: "#f97316",
+            600: "#ea580c",
+            700: "#c2410c",
+            800: "#9a3412",
+            900: "#7c2d12",
+            950: "#431407",
+          },
+          amber: {
+            50: "#fffbeb",
+            100: "#fef3c7",
+            200: "#fde68a",
+            300: "#fcd34d",
+            400: "#fbbf24",
+            500: "#f59e0b",
+            600: "#d97706",
+            700: "#b45309",
+            800: "#92400e",
+            900: "#78350f",
+            950: "#451a03",
+          },
+          yellow: {
+            50: "#fefce8",
+            100: "#fef9c3",
+            200: "#fef08a",
+            300: "#fde047",
+            400: "#facc15",
+            500: "#eab308",
+            600: "#ca8a04",
+            700: "#a16207",
+            800: "#854d0e",
+            900: "#713f12",
+            950: "#422006",
+          },
+          lime: {
+            50: "#f7fee7",
+            100: "#ecfccb",
+            200: "#d9f99d",
+            300: "#bef264",
+            400: "#a3e635",
+            500: "#84cc16",
+            600: "#65a30d",
+            700: "#4d7c0f",
+            800: "#3f6212",
+            900: "#365314",
+            950: "#1a2e05",
+          },
+          green: {
+            50: "#f0fdf4",
+            100: "#dcfce7",
+            200: "#bbf7d0",
+            300: "#86efac",
+            400: "#4ade80",
+            500: "#22c55e",
+            600: "#16a34a",
+            700: "#15803d",
+            800: "#166534",
+            900: "#14532d",
+            950: "#052e16",
+          },
+          emerald: {
+            50: "#ecfdf5",
+            100: "#d1fae5",
+            200: "#a7f3d0",
+            300: "#6ee7b7",
+            400: "#34d399",
+            500: "#10b981",
+            600: "#059669",
+            700: "#047857",
+            800: "#065f46",
+            900: "#064e3b",
+            950: "#022c22",
+          },
+          teal: {
+            50: "#f0fdfa",
+            100: "#ccfbf1",
+            200: "#99f6e4",
+            300: "#5eead4",
+            400: "#2dd4bf",
+            500: "#14b8a6",
+            600: "#0d9488",
+            700: "#0f766e",
+            800: "#115e59",
+            900: "#134e4a",
+            950: "#042f2e",
+          },
+          cyan: {
+            50: "#ecfeff",
+            100: "#cffafe",
+            200: "#a5f3fc",
+            300: "#67e8f9",
+            400: "#22d3ee",
+            500: "#06b6d4",
+            600: "#0891b2",
+            700: "#0e7490",
+            800: "#155e75",
+            900: "#164e63",
+            950: "#083344",
+          },
+          sky: {
+            50: "#f0f9ff",
+            100: "#e0f2fe",
+            200: "#bae6fd",
+            300: "#7dd3fc",
+            400: "#38bdf8",
+            500: "#0ea5e9",
+            600: "#0284c7",
+            700: "#0369a1",
+            800: "#075985",
+            900: "#0c4a6e",
+            950: "#082f49",
+          },
+          blue: {
+            50: "#eff6ff",
+            100: "#dbeafe",
+            200: "#bfdbfe",
+            300: "#93c5fd",
+            400: "#60a5fa",
+            500: "#3b82f6",
+            600: "#2563eb",
+            700: "#1d4ed8",
+            800: "#1e40af",
+            900: "#1e3a8a",
+            950: "#172554",
+          },
+          indigo: {
+            50: "#eef2ff",
+            100: "#e0e7ff",
+            200: "#c7d2fe",
+            300: "#a5b4fc",
+            400: "#818cf8",
+            500: "#6366f1",
+            600: "#4f46e5",
+            700: "#4338ca",
+            800: "#3730a3",
+            900: "#312e81",
+            950: "#1e1b4b",
+          },
+          violet: {
+            50: "#f5f3ff",
+            100: "#ede9fe",
+            200: "#ddd6fe",
+            300: "#c4b5fd",
+            400: "#a78bfa",
+            500: "#8b5cf6",
+            600: "#7c3aed",
+            700: "#6d28d9",
+            800: "#5b21b6",
+            900: "#4c1d95",
+            950: "#2e1065",
+          },
+          purple: {
+            50: "#faf5ff",
+            100: "#f3e8ff",
+            200: "#e9d5ff",
+            300: "#d8b4fe",
+            400: "#c084fc",
+            500: "#a855f7",
+            600: "#9333ea",
+            700: "#7e22ce",
+            800: "#6b21a8",
+            900: "#581c87",
+            950: "#3b0764",
+          },
+          fuchsia: {
+            50: "#fdf4ff",
+            100: "#fae8ff",
+            200: "#f5d0fe",
+            300: "#f0abfc",
+            400: "#e879f9",
+            500: "#d946ef",
+            600: "#c026d3",
+            700: "#a21caf",
+            800: "#86198f",
+            900: "#701a75",
+            950: "#4a044e",
+          },
+          pink: {
+            50: "#fdf2f8",
+            100: "#fce7f3",
+            200: "#fbcfe8",
+            300: "#f9a8d4",
+            400: "#f472b6",
+            500: "#ec4899",
+            600: "#db2777",
+            700: "#be185d",
+            800: "#9d174d",
+            900: "#831843",
+            950: "#500724",
+          },
+          rose: {
+            50: "#fff1f2",
+            100: "#ffe4e6",
+            200: "#fecdd3",
+            300: "#fda4af",
+            400: "#fb7185",
+            500: "#f43f5e",
+            600: "#e11d48",
+            700: "#be123c",
+            800: "#9f1239",
+            900: "#881337",
+            950: "#4c0519",
+          },
+          black: "#000000",
+          white: "#ffffff",
+        },
+        spacing: {
+          0: "0px",
+          px: "1px",
+          0.5: "2px",
+          1: "4px",
+          1.5: "6px",
+          2: "8px",
+          2.5: "10px",
+          3: "12px",
+          3.5: "14px",
+          4: "16px",
+          5: "20px",
+          6: "24px",
+          7: "28px",
+          8: "32px",
+          9: "36px",
+          10: "40px",
+          11: "44px",
+          12: "48px",
+          14: "56px",
+          16: "64px",
+          20: "80px",
+          24: "96px",
+          28: "112px",
+          32: "128px",
+          36: "144px",
+          40: "160px",
+          44: "176px",
+          48: "192px",
+          52: "208px",
+          56: "224px",
+          60: "240px",
+          64: "256px",
+          72: "288px",
+          80: "320px",
+          96: "384px",
+        },
+        typography: {
+          fontSize: {
+            xs: "12px",
+            sm: "14px",
+            base: "16px",
+            lg: "18px",
+            xl: "20px",
+            "2xl": "24px",
+            "3xl": "30px",
+            "4xl": "36px",
+            "5xl": "48px",
+            "6xl": "60px",
+            "7xl": "72px",
+            "8xl": "96px",
+            "9xl": "128px",
+          },
+          fontFamily: {
+            sans: "ui-sans-serif, system-ui, sans-serif",
+            serif: "ui-serif, Georgia, serif",
+            mono: "ui-monospace, monospace",
+            inter: "Inter, sans-serif",
+            segoe: "'Segoe UI', sans-serif",
+            roboto: "Roboto, sans-serif",
+            helvetica: "Helvetica, Arial, sans-serif",
+            arial: "Arial, sans-serif",
+            noto: "'Noto Sans', sans-serif",
+            georgia: "Georgia, serif",
+            cambria: "Cambria, serif",
+            times: "'Times New Roman', Times, serif",
+            sfmono: "SFMono-Regular, monospace",
+            menlo: "Menlo, monospace",
+            monaco: "Monaco, monospace",
+            consolas: "Consolas, monospace",
+            liberationmono: "'Liberation Mono', monospace",
+            courier: "'Courier New', monospace",
+            robotomono: "'Roboto Mono', monospace",
+          },
+          letterSpacing: {
+            tighter: "-0.05em",
+            tight: "-0.025em",
+            normal: "0em",
+            wide: "0.025em",
+            wider: "0.05em",
+            widest: "0.1em",
+          },
+          lineHeight: {
+            none: "1",
+            tight: "1.25",
+            snug: "1.375",
+            normal: "1.5",
+            relaxed: "1.625",
+            loose: "2",
+          },
+          fontWeight: {
+            thin: "100",
+            extralight: "200",
+            light: "300",
+            normal: "400",
+            medium: "500",
+            semibold: "600",
+            bold: "700",
+            extrabold: "800",
+            black: "900",
+          },
+        },
+        effects: {
+          borderWidth: {
+            0: "0px",
+            1: "1px",
+            2: "2px",
+            4: "4px",
+            8: "8px",
+          },
+          opacity: {
+            0: "0",
+            5: "0.05",
+            10: "0.1",
+            20: "0.2",
+            25: "0.25",
+            30: "0.3",
+            40: "0.4",
+            50: "0.5",
+            60: "0.6",
+            70: "0.7",
+            75: "0.75",
+            80: "0.8",
+            90: "0.9",
+            95: "0.95",
+            100: "1",
+          },
+          blur: {
+            none: "0px",
+            sm: "4px",
+            DEFAULT: "8px",
+            md: "12px",
+            lg: "16px",
+            xl: "24px",
+            "2xl": "40px",
+            "3xl": "64px",
+          },
+          shadow: {
+            none: "none",
+            sm: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+            DEFAULT:
+              "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+            md: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+            lg: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+            xl: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+            "2xl": "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+            inner: "inset 0 2px 4px 0 rgb(0 0 0 / 0.05)",
+          },
+        },
+        gradients: {},
+      };
+
+      function inferTokenType(path) {
+        const [category, subcategory] = path;
+        if (category === "colors") return "color";
+        if (category === "spacing") return "dimension";
+        if (category === "typography") {
+          if (subcategory === "fontFamily") return "fontFamily";
+          if (subcategory === "fontWeight") return "fontWeight";
+          if (subcategory === "lineHeight") return "number";
+          return "dimension";
+        }
+        if (category === "effects") {
+          if (subcategory === "opacity") return "number";
+          if (subcategory === "shadow") return "shadow";
+          return "dimension";
+        }
+        if (category === "gradients") return "gradient";
+        return "string";
+      }
+
+      // Converts raw Tailwind token objects into W3C Design Token format
+      // Wraps string values with $value, $type, and $description metadata
+      function toW3CTokens(node, path = []) {
+        if (node && typeof node === "object" && !Array.isArray(node)) {
+          // Skip nodes that are already in W3C format
+          if ("$value" in node) return node;
+          // Recursively process object properties
+          const next = {};
+          Object.entries(node).forEach(([key, value]) => {
+            next[key] = toW3CTokens(value, [...path, key]);
+          });
+          return next;
+        }
+
+        if (typeof node === "string") {
+          // Wrap primitive string values in W3C format with inferred type and path-based description
+          return {
+            $value: node,
+            $type: inferTokenType(path),
+            $description: path.join("."),
+          };
+        }
+
+        return node;
+      }
+
+      // Checks if a token value is in W3C format with a $value property
+      function isTokenLeaf(value) {
+        return !!value && typeof value === "object" && "$value" in value;
+      }
+
+      // Extracts the actual value from a token, handling both W3C-wrapped and raw string formats
+      function tokenValue(value) {
+        if (value == null) return null;
+        if (typeof value === "string") return value;
+        if (isTokenLeaf(value)) return value.$value;
+        return null;
+      }
+
+      // Converts all raw Tailwind tokens to W3C Design Token Format 2025.10
+      const TAILWIND_TOKENS = toW3CTokens(RAW_TAILWIND_TOKENS);
+
+      // This function normalizes custom token names for safe keys.
+      function normalizeCustomTokenName(name) {
+        return String(name || "")
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+      }
+
+      // This function validates full 6-digit hex color values.
+      function isValidHexColor(hex) {
+        return /^#([a-f0-9]{6})$/i.test(String(hex || ""));
+      }
+
+      // This function injects custom color and gradient tokens into the active token registry.
+      function applyCustomTokensToRegistry() {
+        const baseFontFamilyTokens = {
+          sans: "ui-sans-serif, system-ui, sans-serif",
+          serif: "ui-serif, Georgia, serif",
+          mono: "ui-monospace, monospace",
+        };
+        const dynamicFontFamilyTokens = {};
+        availableFontFamilies.forEach((family) => {
+          const normalizedKey = normalizeCustomTokenName(family);
+          if (!normalizedKey || baseFontFamilyTokens[normalizedKey]) return;
+          dynamicFontFamilyTokens[normalizedKey] = {
+            $value: String(family),
+            $type: "fontFamily",
+            $description: `figma.fonts.${normalizedKey}`,
+          };
+        });
+
+        TAILWIND_TOKENS.typography.fontFamily = {
+          ...Object.fromEntries(
+            Object.entries(baseFontFamilyTokens).map(([key, value]) => [
+              key,
+              {
+                $value: value,
+                $type: "fontFamily",
+                $description: `typography.fontFamily.${key}`,
+              },
+            ]),
+          ),
+          ...dynamicFontFamilyTokens,
+        };
+
+        const colorGroup = {};
+        Object.entries(customColors).forEach(([name, hex]) => {
+          if (isValidHexColor(hex)) {
+            colorGroup[name] = {
+              $value: String(hex).toLowerCase(),
+              $type: "color",
+              $description: `custom.colors.${name}`,
+            };
+          }
+        });
+
+        if (Object.keys(colorGroup).length > 0) {
+          TAILWIND_TOKENS.colors.custom = colorGroup;
+        } else {
+          delete TAILWIND_TOKENS.colors.custom;
+        }
+
+        const gradients = {};
+        Object.entries(customGradients).forEach(([name, gradient]) => {
+          const stops = Array.isArray(gradient?.stops)
+            ? gradient.stops.filter(Boolean)
+            : [];
+          const fallbackStops = [gradient?.from, gradient?.to].filter(Boolean);
+          const gradientStops = stops.length >= 2 ? stops : fallbackStops;
+          if (gradientStops.length >= 2) {
+            gradients[name] = {
+              $value: `linear:${gradientStops.join(",")}`,
+              $type: "gradient",
+              $description: `custom.gradients.${name}`,
+            };
+          }
+        });
+
+        TAILWIND_TOKENS.gradients = gradients;
+      }
+
+      // This function requests persisted custom tokens from plugin storage.
+      function requestCustomTokensFromPlugin() {
+        parent.postMessage(
+          {
+            pluginMessage: {
+              type: "request-custom-tokens",
+            },
+          },
+          "*",
+        );
+      }
+
+      // This function sends a custom color token save request to plugin code.
+      function saveCustomColorToken(name, hex) {
+        parent.postMessage(
+          {
+            pluginMessage: {
+              type: "save-custom-color-token",
+              name,
+              hex,
+            },
+          },
+          "*",
+        );
+      }
+
+      // This function sends a custom gradient token save request to plugin code.
+      function saveCustomGradientToken(name, from, to, stops) {
+        parent.postMessage(
+          {
+            pluginMessage: {
+              type: "save-custom-gradient-token",
+              name,
+              from,
+              to,
+              stops,
+            },
+          },
+          "*",
+        );
+      }
+
+      // This function rebuilds the saved gradients dropdown from current custom state.
+      function renderSavedGradientOptions() {
+        const savedGradientSelect = document.getElementById(
+          "saved-gradient-select",
+        );
+        if (!savedGradientSelect) return;
+
+        savedGradientSelect.innerHTML =
+          '<option value="">-- Saved Gradients --</option>';
+        Object.keys(customGradients)
+          .sort()
+          .forEach((name) => {
+            const option = document.createElement("option");
+            option.value = name;
+            option.textContent = name;
+            savedGradientSelect.appendChild(option);
+          });
+      }
+
+      requestCustomTokensFromPlugin();
+
+      // Determines if token parts match the current search query
+      // Checks if any part (name, shade, value) contains the query substring (case-insensitive)
+      function matchesTokenSearch(...parts) {
+        const query = tokenSearchQuery.trim().toLowerCase();
+        if (!query) return true;
+        return parts.some((part) =>
+          String(part ?? "")
+            .toLowerCase()
+            .includes(query),
+        );
+      }
+
+      let currentTokenCategory = "colors";
+      const collapsedTokenGroups = {};
+
+      /* Render token tabs for each category */
+      function renderTokenTabs() {
+        tokenTabs.innerHTML = "";
+        Object.keys(TAILWIND_TOKENS).forEach((category) => {
+          const btn = document.createElement("button");
+          btn.className = `token-tab ${category === currentTokenCategory ? "active" : ""}`;
+          btn.textContent =
+            category.charAt(0).toUpperCase() + category.slice(1);
+          btn.addEventListener("click", () => {
+            currentTokenCategory = category;
+            renderTokenTabs();
+            renderTokenTree();
+          });
+          tokenTabs.appendChild(btn);
+        });
+      }
+
+      /* Render token tree with nested colors/shades */
+      function renderTokenTree() {
+        tokenTree.innerHTML = "";
+
+        // Show/hide spacing property selector based on category
+        const spacingSelector = document.getElementById(
+          "spacing-property-selector",
+        );
+        if (spacingSelector) {
+          spacingSelector.style.display =
+            currentTokenCategory === "spacing" ? "block" : "none";
+        }
+
+        // Show/hide effects property selector based on category
+        const effectsSelector = document.getElementById(
+          "effects-property-selector",
+        );
+        if (effectsSelector) {
+          effectsSelector.style.display =
+            currentTokenCategory === "effects" ? "block" : "none";
+        }
+
+        const gradientSelector = document.getElementById("gradient-selector");
+        if (gradientSelector) {
+          gradientSelector.style.display =
+            currentTokenCategory === "gradients" ? "block" : "none";
+        }
+
+        if (tokenTree) {
+          tokenTree.style.display =
+            currentTokenCategory === "gradients" ? "none" : "block";
+        }
+
+        if (currentTokenCategory === "gradients") {
+          const fromSelect = document.getElementById("gradient-from-select");
+          const toSelect = document.getElementById("gradient-to-select");
+          const extraStopsContainer = document.getElementById(
+            "gradient-extra-stops",
+          );
+          const addStopBtn = document.getElementById("gradient-add-stop-btn");
+          const customColorNameInput =
+            document.getElementById("custom-color-name");
+          const customColorValueInput =
+            document.getElementById("custom-color-value");
+          const saveCustomColorBtn = document.getElementById(
+            "save-custom-color-btn",
+          );
+          const customGradientNameInput = document.getElementById(
+            "custom-gradient-name",
+          );
+          const saveCustomGradientBtn = document.getElementById(
+            "save-custom-gradient-btn",
+          );
+          const savedGradientSelect = document.getElementById(
+            "saved-gradient-select",
+          );
+          const applySavedGradientBtn = document.getElementById(
+            "apply-saved-gradient-btn",
+          );
+
+          const getAllGradientSelects = () => {
+            const extraSelects = extraStopsContainer
+              ? Array.from(
+                  extraStopsContainer.querySelectorAll(
+                    'select[data-gradient-stop="extra"]',
+                  ),
+                )
+              : [];
+            return [fromSelect, toSelect, ...extraSelects].filter(Boolean);
+          };
+
+          const populateColorOptions = (selectEl) => {
+            if (!selectEl) return;
+            selectEl.innerHTML = '<option value="">-- Select Color --</option>';
+            const colors = TAILWIND_TOKENS.colors;
+            Object.entries(colors).forEach(([colorName, shades]) => {
+              if (
+                shades &&
+                typeof shades === "object" &&
+                !isTokenLeaf(shades)
+              ) {
+                Object.entries(shades).forEach(([shade, hexToken]) => {
+                  const hex = tokenValue(hexToken);
+                  if (typeof hex !== "string") return;
+                  const optionValue = `${colorName}-${shade}`;
+                  if (!matchesTokenSearch(optionValue, colorName, shade, hex)) {
+                    return;
+                  }
+                  const option = document.createElement("option");
+                  option.value = optionValue;
+                  option.textContent = optionValue;
+                  option.style.backgroundColor = hex;
+                  option.style.color = getReadableTextColor(hex);
+                  selectEl.appendChild(option);
+                });
+              } else {
+                const simpleColor = tokenValue(shades);
+                if (typeof simpleColor !== "string") return;
+                if (!matchesTokenSearch(colorName, simpleColor)) {
+                  return;
+                }
+                const option = document.createElement("option");
+                option.value = simpleColor;
+                option.textContent = colorName;
+                option.style.backgroundColor = simpleColor;
+                option.style.color = getReadableTextColor(simpleColor);
+                selectEl.appendChild(option);
+              }
+            });
+          };
+
+          const refreshGradientSelectOptions = () => {
+            getAllGradientSelects().forEach((selectEl) => {
+              const previousValue = selectEl.value;
+              populateColorOptions(selectEl);
+              if (
+                previousValue &&
+                Array.from(selectEl.options).some(
+                  (option) => option.value === previousValue,
+                )
+              ) {
+                selectEl.value = previousValue;
+              }
+            });
+          };
+
+          const createExtraGradientStopSelect = (initialValue = "") => {
+            if (!extraStopsContainer) return;
+
+            const row = document.createElement("div");
+            row.className = "gradient-stop-row";
+
+            const selectEl = document.createElement("select");
+            selectEl.setAttribute("data-gradient-stop", "extra");
+            selectEl.style.flex = "1";
+
+            const removeBtn = document.createElement("button");
+            removeBtn.type = "button";
+            removeBtn.className = "button muted";
+            removeBtn.textContent = "Remove";
+            removeBtn.onclick = () => {
+              row.remove();
+            };
+
+            row.appendChild(selectEl);
+            row.appendChild(removeBtn);
+            extraStopsContainer.appendChild(row);
+
+            populateColorOptions(selectEl);
+            if (
+              initialValue &&
+              Array.from(selectEl.options).some(
+                (option) => option.value === initialValue,
+              )
+            ) {
+              selectEl.value = initialValue;
+            }
+          };
+
+          refreshGradientSelectOptions();
+
+          if (addStopBtn) {
+            addStopBtn.onclick = () => {
+              createExtraGradientStopSelect();
+            };
+          }
+
+          const applyBtn = document.getElementById("gradient-apply-btn");
+          if (applyBtn) {
+            applyBtn.onclick = () => {
+              if (!currentNodeId) {
+                console.log("No node selected");
+                return;
+              }
+              const colors = getAllGradientSelects()
+                .map((selectEl) => selectEl.value)
+                .filter(Boolean);
+
+              if (colors.length < 2) {
+                console.log("Select at least two gradient colors");
+                return;
+              }
+
+              parent.postMessage(
+                {
+                  pluginMessage: {
+                    type: "apply-gradient-token",
+                    nodeId: currentNodeId,
+                    colors,
+                  },
+                },
+                "*",
+              );
+            };
+          }
+
+          if (saveCustomColorBtn) {
+            saveCustomColorBtn.onclick = () => {
+              // This handler validates and saves a custom color token.
+              const normalizedName = normalizeCustomTokenName(
+                customColorNameInput?.value,
+              );
+              const hexColor = String(customColorValueInput?.value || "");
+
+              if (!normalizedName) {
+                console.log("Enter a custom color name");
+                return;
+              }
+              if (!isValidHexColor(hexColor)) {
+                console.log("Invalid color hex");
+                return;
+              }
+
+              customColors[normalizedName] = hexColor.toLowerCase();
+              saveCustomColorToken(normalizedName, hexColor.toLowerCase());
+              if (customColorNameInput) customColorNameInput.value = "";
+            };
+          }
+
+          if (saveCustomGradientBtn) {
+            saveCustomGradientBtn.onclick = () => {
+              // This handler validates and saves a custom gradient token.
+              const normalizedName = normalizeCustomTokenName(
+                customGradientNameInput?.value,
+              );
+              const colors = getAllGradientSelects()
+                .map((selectEl) => selectEl.value)
+                .filter(Boolean);
+              const fromValue = colors[0] || "";
+              const toValue = colors[colors.length - 1] || "";
+
+              if (!normalizedName) {
+                console.log("Enter a custom gradient name");
+                return;
+              }
+              if (colors.length < 2 || !fromValue || !toValue) {
+                console.log("Select at least two gradient colors");
+                return;
+              }
+
+              customGradients[normalizedName] = {
+                from: fromValue,
+                to: toValue,
+                stops: colors,
+              };
+              saveCustomGradientToken(
+                normalizedName,
+                fromValue,
+                toValue,
+                colors,
+              );
+              if (customGradientNameInput) customGradientNameInput.value = "";
+            };
+          }
+
+          if (applySavedGradientBtn) {
+            applySavedGradientBtn.onclick = () => {
+              // This handler applies a saved gradient token to the selected node.
+              if (!currentNodeId) {
+                console.log("No node selected");
+                return;
+              }
+
+              const selectedName = savedGradientSelect?.value || "";
+              if (!selectedName || !customGradients[selectedName]) {
+                console.log("Select a saved gradient");
+                return;
+              }
+
+              const savedGradient = customGradients[selectedName];
+              const savedStops = Array.isArray(savedGradient.stops)
+                ? savedGradient.stops.filter(Boolean)
+                : [];
+              const colorsToApply =
+                savedStops.length >= 2
+                  ? savedStops
+                  : [savedGradient.from, savedGradient.to].filter(Boolean);
+
+              parent.postMessage(
+                {
+                  pluginMessage: {
+                    type: "apply-gradient-token",
+                    nodeId: currentNodeId,
+                    colors: colorsToApply,
+                  },
+                },
+                "*",
+              );
+            };
+          }
+
+          renderSavedGradientOptions();
+        }
+
+        const categoryTokens = TAILWIND_TOKENS[currentTokenCategory];
+        if (!categoryTokens) return;
+
+        const isColorCategory = currentTokenCategory === "colors";
+        const isTypographyCategory = currentTokenCategory === "typography";
+        const isEffectsCategory = currentTokenCategory === "effects";
+        const isGradientCategory = currentTokenCategory === "gradients";
+
+        if (isTokenLeaf(categoryTokens) || typeof categoryTokens !== "object") {
+          const singleRow = document.createElement("div");
+          singleRow.className = "token-shade";
+          const label = document.createElement("div");
+          label.className = "token-shade-label";
+          label.textContent = currentTokenCategory;
+          const value = document.createElement("div");
+          value.className = "token-shade-value";
+          value.textContent = String(
+            tokenValue(categoryTokens) ?? categoryTokens,
+          );
+          singleRow.appendChild(label);
+          singleRow.appendChild(value);
+          tokenTree.appendChild(singleRow);
+          return;
+        }
+
+        const flatTokens = [];
+
+        Object.entries(categoryTokens).forEach(([tokenName, tokenEntry]) => {
+          if (
+            tokenEntry &&
+            typeof tokenEntry === "object" &&
+            !isTokenLeaf(tokenEntry)
+          ) {
+            const group = document.createElement("div");
+            group.className = "token-color-group";
+
+            const colorNameEl = document.createElement("div");
+            colorNameEl.className = "token-color-name";
+            group.appendChild(colorNameEl);
+
+            const shadesContainer = document.createElement("div");
+            shadesContainer.className = "token-shades";
+            let visibleShadeCount = 0;
+
+            Object.entries(tokenEntry).forEach(([shade, shadeEntry]) => {
+              const shadeValue = tokenValue(shadeEntry);
+              if (shadeValue === null) return;
+              if (!matchesTokenSearch(tokenName, shade, shadeValue)) {
+                return;
+              }
+              const shadeEl = document.createElement("div");
+              shadeEl.className = "token-shade";
+
+              const label = document.createElement("div");
+              label.className = "token-shade-label";
+              label.textContent = shade;
+
+              const valueEl = document.createElement("div");
+              valueEl.className = "token-shade-value";
+              if (isEffectsCategory && tokenName === "shadow") {
+                valueEl.textContent = "preset";
+                valueEl.title = String(shadeValue);
+              } else {
+                valueEl.textContent = String(shadeValue);
+              }
+
+              // Apply background color to the entire row for color tokens
+              if (isColorCategory) {
+                shadeEl.style.backgroundColor = String(shadeValue);
+                // Set text color based on brightness for readability
+                const textColor =
+                  parseInt(shade) >= 500 ? "#ffffff" : "#000000";
+                label.style.color = textColor;
+                valueEl.style.color = textColor;
+              }
+
+              shadeEl.appendChild(label);
+              shadeEl.appendChild(valueEl);
+
+              if (isColorCategory) {
+                shadeEl.addEventListener("click", () => {
+                  if (!currentNodeId) {
+                    console.log("No node selected");
+                    return;
+                  }
+
+                  const colorProperty =
+                    document.getElementById("color-property-select")?.value ||
+                    "fill";
+
+                  if (tokenName === "custom") {
+                    parent.postMessage(
+                      {
+                        pluginMessage: {
+                          type: "apply-custom-color",
+                          nodeId: currentNodeId,
+                          colorHex: String(shadeValue),
+                          colorName: shade,
+                          property: colorProperty,
+                        },
+                      },
+                      "*",
+                    );
+                    return;
+                  }
+
+                  parent.postMessage(
+                    {
+                      pluginMessage: {
+                        type: "apply-token",
+                        nodeId: currentNodeId,
+                        colorName: tokenName,
+                        shade: shade,
+                        property: colorProperty,
+                      },
+                    },
+                    "*",
+                  );
+                });
+              } else if (isTypographyCategory) {
+                // Typography tokens: tokenName is the category (fontSize, fontFamily, etc.)
+                shadeEl.addEventListener("click", () => {
+                  if (!currentNodeId) {
+                    console.log("No node selected");
+                    return;
+                  }
+
+                  const payload = {
+                    type: "apply-typography-token",
+                    nodeId: currentNodeId,
+                    category: tokenName,
+                    tokenName: shade,
+                  };
+
+                  if (tokenName === "fontFamily") {
+                    Object.assign(payload, { fontFamily: String(shadeValue) });
+                  }
+
+                  parent.postMessage(
+                    {
+                      pluginMessage: payload,
+                    },
+                    "*",
+                  );
+                });
+              } else if (isEffectsCategory) {
+                // Effects tokens: tokenName is the category (borderWidth, opacity, blur)
+                shadeEl.addEventListener("click", () => {
+                  if (!currentNodeId) {
+                    console.log("No node selected");
+                    return;
+                  }
+
+                  const payload = {
+                    type: "apply-effects-token",
+                    nodeId: currentNodeId,
+                    category: tokenName,
+                    tokenName: shade,
+                  };
+
+                  if (tokenName === "borderWidth") {
+                    const strokePosition =
+                      document.getElementById("stroke-position-select")
+                        ?.value || "CENTER";
+                    Object.assign(payload, { strokePosition });
+                  } else if (tokenName === "blur") {
+                    const blurType =
+                      document.getElementById("blur-type-select")?.value ||
+                      "LAYER_BLUR";
+                    Object.assign(payload, { blurType });
+                  }
+
+                  parent.postMessage(
+                    {
+                      pluginMessage: payload,
+                    },
+                    "*",
+                  );
+                });
+              }
+
+              shadesContainer.appendChild(shadeEl);
+              visibleShadeCount += 1;
+            });
+
+            if (visibleShadeCount === 0) {
+              return;
+            }
+
+            const groupKey = `${currentTokenCategory}:${tokenName}`;
+            const isSearchActive = tokenSearchQuery.trim().length > 0;
+            const isCollapsed =
+              !isSearchActive && collapsedTokenGroups[groupKey] === true;
+
+            colorNameEl.textContent = `${isCollapsed ? "▸" : "▾"} ${tokenName} (${visibleShadeCount})`;
+            colorNameEl.addEventListener("click", () => {
+              collapsedTokenGroups[groupKey] = !collapsedTokenGroups[groupKey];
+              renderTokenTree();
+            });
+
+            shadesContainer.style.display = isCollapsed ? "none" : "flex";
+
+            group.appendChild(shadesContainer);
+            tokenTree.appendChild(group);
+          } else {
+            const flatValue = tokenValue(tokenEntry);
+            if (!matchesTokenSearch(tokenName, flatValue)) {
+              return;
+            }
+            flatTokens.push({ name: tokenName, value: flatValue });
+          }
+        });
+
+        if (flatTokens.length > 0) {
+          const group = document.createElement("div");
+          group.className = "token-color-group";
+
+          const header = document.createElement("div");
+          header.className = "token-color-name";
+          header.textContent = currentTokenCategory;
+          group.appendChild(header);
+
+          const rows = document.createElement("div");
+          rows.className = "token-shades";
+
+          flatTokens.forEach((token) => {
+            const row = document.createElement("div");
+            row.className = "token-shade";
+
+            if (isColorCategory) {
+              const swatch = document.createElement("div");
+              swatch.className = "token-swatch";
+              if (typeof token.value === "string") {
+                swatch.style.backgroundColor = token.value;
+              }
+              row.appendChild(swatch);
+            }
+            if (isGradientCategory) {
+              const [, colorsPart] = String(token.value).split(":");
+              const colors = colorsPart
+                ? colorsPart.split(",").map((c) => c.trim())
+                : [];
+              if (colors.length >= 2) {
+                row.style.background = `linear-gradient(90deg, ${colors.join(", ")})`;
+                row.style.border = "1px solid rgba(0,0,0,0.08)";
+                row.style.color = "#ffffff";
+                row.style.textShadow = "0 1px 2px rgba(0,0,0,0.35)";
+              }
+            }
+
+            const label = document.createElement("div");
+            label.className = "token-shade-label";
+            label.textContent = token.name;
+
+            const value = document.createElement("div");
+            value.className = "token-shade-value";
+            value.textContent = String(token.value ?? "");
+
+            row.appendChild(label);
+            row.appendChild(value);
+
+            if (isColorCategory) {
+              row.addEventListener("click", () => {
+                if (!currentNodeId) {
+                  console.log("No node selected");
+                  return;
+                }
+
+                parent.postMessage(
+                  {
+                    pluginMessage: {
+                      type: "apply-token",
+                      nodeId: currentNodeId,
+                      colorName: token.name,
+                      shade: "default",
+                    },
+                  },
+                  "*",
+                );
+              });
+            } else if (isGradientCategory) {
+              row.addEventListener("click", () => {
+                if (!currentNodeId) {
+                  console.log("No node selected");
+                  return;
+                }
+
+                parent.postMessage(
+                  {
+                    pluginMessage: {
+                      type: "apply-gradient-token",
+                      nodeId: currentNodeId,
+                      tokenName: token.name,
+                    },
+                  },
+                  "*",
+                );
+              });
+            } else if (currentTokenCategory === "spacing") {
+              row.addEventListener("click", () => {
+                if (!currentNodeId) {
+                  console.log("No node selected");
+                  return;
+                }
+
+                // Get the selected property from the dropdown
+                const selector = document.getElementById(
+                  "spacing-property-select",
+                );
+                const property = selector ? selector.value : "padding";
+
+                if (!property) return;
+
+                parent.postMessage(
+                  {
+                    pluginMessage: {
+                      type: "apply-spacing-token",
+                      nodeId: currentNodeId,
+                      tokenName: token.name,
+                      property: property,
+                    },
+                  },
+                  "*",
+                );
+              });
+            } else if (currentTokenCategory === "typography") {
+              // For typography, token.name is the subcategory (fontSize, fontFamily, etc.)
+            }
+
+            rows.appendChild(row);
+          });
+
+          group.appendChild(rows);
+          tokenTree.appendChild(group);
+        }
+
+        if (!tokenTree.hasChildNodes()) {
+          const empty = document.createElement("div");
+          empty.className = "property-value";
+          empty.textContent = "No matching tokens";
+          tokenTree.appendChild(empty);
+        }
+      }
+
+      // Syncs search input to live token tree filtering
+      // Updates tokenSearchQuery and rerenders the token browser whenever the search input changes
+      if (tokenSearchInput) {
+        tokenSearchInput.addEventListener("input", () => {
+          tokenSearchQuery = tokenSearchInput.value || "";
+          renderTokenTree();
+        });
+      }
+
+      /* === Render Functions === */
+      /* Display all node properties in the Editable Fields section */
+      function renderProperties(data) {
+        properties.innerHTML = "";
+        if (!data) return;
+
+        const allKeys = Object.keys(data).filter((key) => key !== "children");
+        const orderedKeys = [
+          ...propertyOrder.filter((key) => allKeys.includes(key)),
+          ...allKeys.filter((key) => !propertyOrder.includes(key)),
+        ];
+
+        orderedKeys.forEach((key) => {
+          const row = document.createElement("div");
+          row.className = "property-row";
+
+          const keyLabel = document.createElement("div");
+          keyLabel.className = "property-key";
+          keyLabel.textContent = propertyLabels[key] || key;
+
+          let valueEl;
+          const config = editableConfig[key];
+          if (config) {
+            const rawValue = config.getValue
+              ? config.getValue(data[key])
+              : data[key];
+            const isMixed = rawValue === null && config.allowMixed;
+
+            if (
+              isMixed &&
+              key === "padding" &&
+              data[key] &&
+              typeof data[key] === "object"
+            ) {
+              const grid = document.createElement("div");
+              grid.className = "property-subgrid";
+              const sides = [
+                { label: "Top", field: "top" },
+                { label: "Right", field: "right" },
+                { label: "Bottom", field: "bottom" },
+                { label: "Left", field: "left" },
+              ];
+
+              sides.forEach(({ label, field }) => {
+                const wrap = document.createElement("div");
+                wrap.className = "property-subfield";
+                const lab = document.createElement("label");
+                lab.textContent = label;
+                const sideInput = document.createElement("input");
+                sideInput.type = "number";
+                sideInput.className = "property-input";
+                sideInput.value = String(data[key][field] ?? 0);
+                sideInput.addEventListener("change", () => {
+                  if (currentNodeId === null) return;
+                  const top = Number(
+                    field === "top" ? sideInput.value : (data[key].top ?? 0),
+                  );
+                  const right = Number(
+                    field === "right"
+                      ? sideInput.value
+                      : (data[key].right ?? 0),
+                  );
+                  const bottom = Number(
+                    field === "bottom"
+                      ? sideInput.value
+                      : (data[key].bottom ?? 0),
+                  );
+                  const left = Number(
+                    field === "left" ? sideInput.value : (data[key].left ?? 0),
+                  );
+                  parent.postMessage(
+                    {
+                      pluginMessage: {
+                        type: "update-node",
+                        nodeId: currentNodeId,
+                        property: "padding",
+                        value: { top, right, bottom, left },
+                      },
+                    },
+                    "*",
+                  );
+                });
+                wrap.appendChild(lab);
+                wrap.appendChild(sideInput);
+                grid.appendChild(wrap);
+              });
+              valueEl = grid;
+            } else if (
+              isMixed &&
+              key === "cornerRadius" &&
+              data[key] &&
+              typeof data[key] === "object"
+            ) {
+              const grid = document.createElement("div");
+              grid.className = "property-subgrid";
+              const corners = [
+                { label: "Top Left", field: "topLeft" },
+                { label: "Top Right", field: "topRight" },
+                { label: "Bottom Right", field: "bottomRight" },
+                { label: "Bottom Left", field: "bottomLeft" },
+              ];
+
+              corners.forEach(({ label, field }) => {
+                const wrap = document.createElement("div");
+                wrap.className = "property-subfield";
+                const lab = document.createElement("label");
+                lab.textContent = label;
+                const cornerInput = document.createElement("input");
+                cornerInput.type = "number";
+                cornerInput.className = "property-input";
+                cornerInput.value = String(data[key][field] ?? 0);
+                cornerInput.addEventListener("change", () => {
+                  if (currentNodeId === null) return;
+                  const topLeft = Number(
+                    field === "topLeft"
+                      ? cornerInput.value
+                      : (data[key].topLeft ?? 0),
+                  );
+                  const topRight = Number(
+                    field === "topRight"
+                      ? cornerInput.value
+                      : (data[key].topRight ?? 0),
+                  );
+                  const bottomRight = Number(
+                    field === "bottomRight"
+                      ? cornerInput.value
+                      : (data[key].bottomRight ?? 0),
+                  );
+                  const bottomLeft = Number(
+                    field === "bottomLeft"
+                      ? cornerInput.value
+                      : (data[key].bottomLeft ?? 0),
+                  );
+                  parent.postMessage(
+                    {
+                      pluginMessage: {
+                        type: "update-node",
+                        nodeId: currentNodeId,
+                        property: "cornerRadius",
+                        value: { topLeft, topRight, bottomRight, bottomLeft },
+                      },
+                    },
+                    "*",
+                  );
+                });
+                wrap.appendChild(lab);
+                wrap.appendChild(cornerInput);
+                grid.appendChild(wrap);
+              });
+              valueEl = grid;
+            } else {
+              const input = document.createElement("input");
+              input.className = "property-input";
+              input.type = config.type === "number" ? "number" : "text";
+              if (config.min !== undefined) input.min = String(config.min);
+              if (config.max !== undefined) input.max = String(config.max);
+              if (config.step !== undefined) input.step = String(config.step);
+
+              if (
+                rawValue === null ||
+                rawValue === undefined ||
+                rawValue === ""
+              ) {
+                input.value = "";
+                input.placeholder = "mixed";
+                input.disabled = true;
+              } else {
+                input.value = String(rawValue);
+              }
+
+              input.addEventListener("change", () => {
+                if (currentNodeId === null || input.disabled) return;
+                const nextValue =
+                  config.type === "number" ? Number(input.value) : input.value;
+                if (config.type === "number" && !Number.isFinite(nextValue)) {
+                  input.value = String(rawValue ?? "");
+                  return;
+                }
+                parent.postMessage(
+                  {
+                    pluginMessage: {
+                      type: "update-node",
+                      nodeId: currentNodeId,
+                      property: key,
+                      value: nextValue,
+                    },
+                  },
+                  "*",
+                );
+              });
+              valueEl = input;
+            }
+          } else {
+            const valueLabel = document.createElement("div");
+            valueLabel.className = "property-value";
+            valueLabel.textContent = toDisplayValue(data[key]);
+            valueEl = valueLabel;
+          }
+
+          row.appendChild(keyLabel);
+          row.appendChild(valueEl);
+          properties.appendChild(row);
+        });
+      }
+
+      /* === Color Conversion === */
+      /* Convert RGB object (0-1 values) to hex string (#RRGGBB) */
+      /* Example: {r: 1, g: 0.5, b: 0} becomes "#ff7f00" */
+      function rgbToHex(color) {
+        if (!color) return null;
+        const r = Math.round(color.r * 255)
+          .toString(16)
+          .padStart(2, "0");
+        const g = Math.round(color.g * 255)
+          .toString(16)
+          .padStart(2, "0");
+        const b = Math.round(color.b * 255)
+          .toString(16)
+          .padStart(2, "0");
+        return `#${r}${g}${b}`;
+      }
+
+      function getReadableTextColor(hex) {
+        if (!hex || typeof hex !== "string") return "#111827";
+        const cleaned = hex.replace("#", "");
+        if (cleaned.length !== 6) return "#111827";
+        const r = parseInt(cleaned.slice(0, 2), 16);
+        const g = parseInt(cleaned.slice(2, 4), 16);
+        const b = parseInt(cleaned.slice(4, 6), 16);
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return luminance > 0.6 ? "#111827" : "#ffffff";
+      }
+
+      function renderSwatches(data) {
+        colorSwatches.innerHTML = "";
+        if (!data) return;
+
+        const swatches = [];
+        const seen = new Set();
+
+        /* Helper to add unique color swatch (avoids duplicates) */
+        function addSwatch(name, hex) {
+          if (!hex || seen.has(hex)) return;
+          seen.add(hex);
+          swatches.push({ name, value: hex });
+        }
+
+        /* Rechecks node tree to collect all fill/stroke colors */
+        /* Checks fills/strokes arrays first, then falls back to single fill/stroke */
+        function collectNodeColors(node) {
+          if (!node) return;
+
+          if (Array.isArray(node.fills) && node.fills.length > 0) {
+            node.fills.forEach((fill, index) => {
+              if (fill && fill.type === "SOLID" && fill.color) {
+                const hex = rgbToHex(fill.color);
+                addSwatch(`Fill ${index + 1}`, hex);
+              }
+            });
+          } else if (node.fill) {
+            addSwatch("Fill", node.fill);
+          }
+
+          if (Array.isArray(node.strokes) && node.strokes.length > 0) {
+            node.strokes.forEach((stroke, index) => {
+              if (stroke && stroke.type === "SOLID" && stroke.color) {
+                const hex = rgbToHex(stroke.color);
+                addSwatch(`Stroke ${index + 1}`, hex);
+              }
+            });
+          } else if (node.stroke && node.stroke.color) {
+            addSwatch("Stroke", node.stroke.color);
+          }
+
+          if (Array.isArray(node.children)) {
+            node.children.forEach((child) => collectNodeColors(child));
+          }
+        }
+
+        collectNodeColors(data);
+
+        if (swatches.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "property-value";
+          empty.textContent = "No colors found";
+          colorSwatches.appendChild(empty);
+          return;
+        }
+
+        swatches.forEach((swatch) => {
+          const item = document.createElement("div");
+          item.className = "swatch";
+
+          const color = document.createElement("div");
+          color.className = "swatch-color";
+          color.style.background = swatch.value;
+
+          const labels = document.createElement("div");
+          labels.className = "swatch-labels";
+
+          const name = document.createElement("div");
+          name.className = "swatch-name";
+          name.textContent = swatch.name;
+
+          const value = document.createElement("div");
+          value.className = "swatch-value";
+          value.textContent = swatch.value;
+
+          labels.appendChild(name);
+          labels.appendChild(value);
+          item.appendChild(color);
+          item.appendChild(labels);
+          colorSwatches.appendChild(item);
+        });
+      }
+
+      function renderChildFills(data) {
+        childFills.innerHTML = "";
+        if (!data) return;
+
+        const rows = [];
+
+        function visit(node) {
+          if (!node) return;
+          if (node.id && node.fill) {
+            rows.push({
+              id: node.id,
+              name: node.name || node.id,
+              fill: node.fill,
+            });
+          }
+          if (Array.isArray(node.children)) {
+            node.children.forEach((child) => visit(child));
+          }
+        }
+
+        visit(data);
+
+        if (rows.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "property-value";
+          empty.textContent = "No child fills found";
+          childFills.appendChild(empty);
+          return;
+        }
+
+        rows.forEach((row) => {
+          const item = document.createElement("div");
+          item.className = "child-fill-row";
+
+          const name = document.createElement("div");
+          name.className = "child-fill-name";
+          name.textContent = row.name;
+
+          const swatch = document.createElement("div");
+          swatch.className = "child-fill-swatch";
+          swatch.style.background = row.fill;
+
+          const input = document.createElement("input");
+          input.type = "text";
+          input.className = "property-input";
+          input.value = row.fill;
+          input.addEventListener("change", () => {
+            if (currentNodeId === null) return;
+            parent.postMessage(
+              {
+                pluginMessage: {
+                  type: "update-node",
+                  nodeId: row.id,
+                  parentId: currentNodeId,
+                  property: "fill",
+                  value: input.value,
+                },
+              },
+              "*",
+            );
+          });
+
+          item.appendChild(name);
+          item.appendChild(swatch);
+          item.appendChild(input);
+          childFills.appendChild(item);
+        });
+      }
+
+      /* Display code based on current mode (html/tailwind) */
+      function renderCode() {
+        codeOutput.textContent = getCodeForMode();
+      }
+
+      /* Recalculate open collapsible heights after content updates */
+      function refreshOpenCollapsibles() {
+        const openButtons = document.querySelectorAll(".collapsible.active");
+        openButtons.forEach((button) => {
+          const content = button.nextElementSibling;
+          if (!content) return;
+          content.style.maxHeight = content.scrollHeight + "px";
+        });
+      }
+
+      /* Switch between HTML+CSS and HTML+Tailwind modes */
+      function setMode(mode) {
+        appState.mode = mode;
+        tabHtml.classList.toggle("active", mode === "html");
+        tabTailwind.classList.toggle("active", mode === "tailwind");
+        renderCode();
+      }
+
+      /* Copy current code to clipboard using textarea + execCommand */
+      /* Shows temporary "Copied" message on button */
+      function copyCode() {
+        const text = getCodeForMode();
+        if (!text) return;
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+
+        copyButton.textContent = "Copied";
+        setTimeout(() => {
+          copyButton.textContent = "Copy";
+        }, 1200);
+      }
+
+      /* Download current code as HTML file based on mode */
+      function downloadCode() {
+        const text = getCodeForMode();
+        const blob = new Blob([text], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download =
+          appState.mode === "html" ? "code.html" : "tailwind.html";
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function updateSelection(message) {
+        currentNodeId = message.data?.id || null;
+        frameName.textContent = message.data?.name || "Unnamed frame";
+        renderProperties(message.data);
+        renderSwatches(message.data);
+        renderChildFills(message.data);
+        renderTokenTabs();
+        renderTokenTree();
+        appState.html = message.html || "";
+        appState.tailwind = message.tailwind || "";
+        renderCode();
+        requestAnimationFrame(refreshOpenCollapsibles);
+      }
+
+      function clearSelection() {
+        currentNodeId = null;
+        frameName.textContent = "No selection";
+        properties.innerHTML = "";
+        colorSwatches.innerHTML = "";
+        childFills.innerHTML = "";
+        appState.html = "";
+        appState.tailwind = "";
+        renderCode();
+        requestAnimationFrame(refreshOpenCollapsibles);
+      }
+
+      /* === Event Handlers === */
+      tabHtml.addEventListener("click", () => setMode("html"));
+      tabTailwind.addEventListener("click", () => setMode("tailwind"));
+      copyButton.addEventListener("click", copyCode);
+      downloadButton.addEventListener("click", downloadCode);
+      popoutButton.addEventListener("click", () => {
+        isPoppedOut = !isPoppedOut;
+        popoutButton.textContent = isPoppedOut ? "Dock" : "Pop out";
+        parent.postMessage(
+          { pluginMessage: { type: "toggle-popout", poppedOut: isPoppedOut } },
+          "*",
+        );
+      });
+
+      /* === Collapsible Functionality (W3Schools pattern) === */
+      var coll = document.getElementsByClassName("collapsible");
+      var i;
+
+      for (i = 0; i < coll.length; i++) {
+        coll[i].addEventListener("click", function () {
+          this.classList.toggle("active");
+          var content = this.nextElementSibling;
+          if (content.style.maxHeight) {
+            content.classList.remove("open");
+            content.style.maxHeight = null;
+          } else {
+            content.classList.add("open");
+            content.style.maxHeight = content.scrollHeight + "px";
+          }
+        });
+      }
+
+      /* === Message Handling === */
+      /* Receives updates from plugin code when selection changes */
+      window.onmessage = (event) => {
+        const message = event.data.pluginMessage;
+        if (!message) return;
+
+        if (message.type === "selection-update") updateSelection(message);
+        if (message.type === "no-selection") clearSelection();
+        if (message.type === "custom-tokens-update") {
+          // This branch updates local custom token state from plugin storage data.
+          customColors =
+            message.colors && typeof message.colors === "object"
+              ? message.colors
+              : {};
+          customGradients =
+            message.gradients && typeof message.gradients === "object"
+              ? message.gradients
+              : {};
+          availableFontFamilies = Array.isArray(message.availableFontFamilies)
+            ? message.availableFontFamilies
+                .map((fontFamily) => String(fontFamily || "").trim())
+                .filter(Boolean)
+            : [];
+          applyCustomTokensToRegistry();
+          renderSavedGradientOptions();
+          renderTokenTabs();
+          renderTokenTree();
+        }
+      };
+
+      requestCustomTokensFromPlugin();
+    </script>
+  </body>
+</html>
