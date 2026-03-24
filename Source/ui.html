@@ -805,6 +805,9 @@
         <div class="tabs">
           <button class="button active" id="tab-html">HTML + CSS</button>
           <button class="button" id="tab-tailwind">HTML + Tailwind</button>
+          <button class="button" id="tab-react-tailwind">
+            React + Tailwind
+          </button>
         </div>
         <pre id="code-output" aria-live="polite"></pre>
         <div class="actions">
@@ -826,16 +829,18 @@
       const codeOutput = document.getElementById("code-output");
       const tabHtml = document.getElementById("tab-html");
       const tabTailwind = document.getElementById("tab-tailwind");
+      const tabReactTailwind = document.getElementById("tab-react-tailwind");
       const copyButton = document.getElementById("copy-btn");
       const downloadButton = document.getElementById("download-btn");
       const popoutButton = document.getElementById("popout-btn");
 
       /* === App State === */
-      /* Tracks current mode (html/tailwind) and generated code */
+      /* Tracks current mode (html/tailwind/react-tailwind) and generated code */
       const appState = {
         mode: "html",
         html: "",
         tailwind: "",
+        reactTailwind: "",
       };
 
       let isPoppedOut = false;
@@ -931,7 +936,9 @@
 
       /* Return the current code based on selected mode */
       function getCodeForMode() {
-        return appState.mode === "html" ? appState.html : appState.tailwind;
+        if (appState.mode === "html") return appState.html;
+        if (appState.mode === "tailwind") return appState.tailwind;
+        return appState.reactTailwind;
       }
 
       /* === Tailwind Token Registry (raw values) === */
@@ -2663,11 +2670,12 @@
         });
       }
 
-      /* Switch between HTML+CSS and HTML+Tailwind modes */
+      /* Switch between HTML+CSS, HTML+Tailwind, and React+Tailwind modes */
       function setMode(mode) {
         appState.mode = mode;
         tabHtml.classList.toggle("active", mode === "html");
         tabTailwind.classList.toggle("active", mode === "tailwind");
+        tabReactTailwind.classList.toggle("active", mode === "react-tailwind");
         renderCode();
       }
 
@@ -2695,12 +2703,20 @@
       /* Download current code as HTML file based on mode */
       function downloadCode() {
         const text = getCodeForMode();
-        const blob = new Blob([text], { type: "text/html" });
+        const isReactMode = appState.mode === "react-tailwind";
+        const blob = new Blob([text], {
+          type: isReactMode ? "text/javascript" : "text/html",
+        });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download =
-          appState.mode === "html" ? "code.html" : "tailwind.html";
+        if (appState.mode === "html") {
+          link.download = "code.html";
+        } else if (appState.mode === "tailwind") {
+          link.download = "tailwind.html";
+        } else {
+          link.download = "component.jsx";
+        }
         link.click();
         URL.revokeObjectURL(url);
       }
@@ -2715,6 +2731,7 @@
         renderTokenTree();
         appState.html = message.html || "";
         appState.tailwind = message.tailwind || "";
+        appState.reactTailwind = message.reactTailwind || "";
         renderCode();
         requestAnimationFrame(refreshOpenCollapsibles);
       }
@@ -2727,6 +2744,7 @@
         childFills.innerHTML = "";
         appState.html = "";
         appState.tailwind = "";
+        appState.reactTailwind = "";
         renderCode();
         requestAnimationFrame(refreshOpenCollapsibles);
       }
@@ -2734,6 +2752,9 @@
       /* === Event Handlers === */
       tabHtml.addEventListener("click", () => setMode("html"));
       tabTailwind.addEventListener("click", () => setMode("tailwind"));
+      tabReactTailwind.addEventListener("click", () =>
+        setMode("react-tailwind"),
+      );
       copyButton.addEventListener("click", copyCode);
       downloadButton.addEventListener("click", downloadCode);
       popoutButton.addEventListener("click", () => {

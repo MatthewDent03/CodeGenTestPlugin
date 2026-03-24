@@ -1655,7 +1655,7 @@ if (figma.editorType === "figma") {
       "Arial",
       "Noto Sans",
       "Helvetica",
-    ], 
+    ],
     serif: ["Georgia", "Cambria", "Times New Roman", "Times"],
     mono: [
       "SF Mono",
@@ -1667,7 +1667,7 @@ if (figma.editorType === "figma") {
       "Roboto Mono",
     ],
   };
-//testing new classroom push
+  //testing new classroom push
   async function getAvailableFontsCached(): Promise<Font[]> {
     if (!availableFontsCache) {
       availableFontsCache = await figma.listAvailableFontsAsync();
@@ -1812,11 +1812,13 @@ if (figma.editorType === "figma") {
     const props = extractNodeProperties(node);
     const html = convertNode(node, 0);
     const tailwind = convertNodeTailwind(node, 0);
+    const reactTailwind = convertNodeReactTailwind(node, 0);
     figma.ui.postMessage({
       type: "selection-update",
       data: props,
       html,
       tailwind,
+      reactTailwind,
     });
   }
 
@@ -3372,6 +3374,36 @@ function convertFrameTailwind(
     .join(" ")}">\n${childrenHtml}${indent(level)}</${htmlTag}>\n`;
 }
 
+function escapeJsxText(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/{/g, "&#123;")
+    .replace(/}/g, "&#125;");
+}
+
+function toReactTailwindComponent(tailwindHtml: string): string {
+  const normalized = tailwindHtml
+    .replace(/\bclass=/g, "className=")
+    .replace(/>([^<]*)</g, (_match, textContent: string) => {
+      return `>${escapeJsxText(textContent)}<`;
+    })
+    .trimEnd();
+
+  const indentedBody = normalized
+    .split("\n")
+    .map((line) => (line.length > 0 ? `      ${line}` : line))
+    .join("\n");
+
+  return `export default function GeneratedComponent() {\n  return (\n${indentedBody}\n  );\n}\n`;
+}
+
+function convertNodeReactTailwind(node: SceneNode, level: number = 0): string {
+  const tailwindHtml = convertNodeTailwind(node, level);
+  return toReactTailwindComponent(tailwindHtml);
+}
+
 // === PROPERTY EXTRACTOR FOR UI ===
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function getCommonRadius(node: SceneNode) {
@@ -3508,7 +3540,11 @@ if (figma.editorType === "dev" && figma.mode === "codegen") {
   figma.codegen.on("generate", ({ node, language }) => {
     if (!node) {
       return [
-        { title: "HTML", language: "HTML", code: "<!-- No selection -->" },
+        {
+          title: "HTML",
+          language: "HTML",
+          code: "<!-- No selection -->",
+        },
       ];
     }
 
@@ -3522,6 +3558,16 @@ if (figma.editorType === "dev" && figma.mode === "codegen") {
           title: "Tailwind HTML",
           language: "HTML",
           code: convertNodeTailwind(node, 0),
+        },
+      ];
+    }
+
+    if (language === "REACT_TAILWIND") {
+      return [
+        {
+          title: "React Tailwind",
+          language: "JAVASCRIPT",
+          code: convertNodeReactTailwind(node, 0),
         },
       ];
     }
