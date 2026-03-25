@@ -1,18 +1,20 @@
 import { toReactTailwindComponent } from "./main/codegen/reactTailwind";
-import { findClosest } from "./main/utils/findClosest";
+import {
+  addNodeBackgroundClass,
+  addNodeNameClass,
+  addNodePositionClasses,
+  addNodeRadiusClass,
+  addNodeSizeClasses,
+  addNodeStrokeClasses,
+} from "./main/codegen/tailwindNodeClassBuilders";
 import { nameToClass } from "./main/utils/nameToClass";
 import {
-  pxToSize,
   pxToFontSize,
   pxToLineHeight,
   pxToLetterSpacing,
-  pxToSpacing,
-  pxToPosition,
 } from "./main/converters/tailwindConverters";
 import {
   paddingToTailwind,
-  radiusToTailwind,
-  borderWidthToTailwind,
   opacityToTailwind,
   colorToTailwind as formatColorToTailwind,
 } from "./main/formatters/tailwindFormatters";
@@ -37,21 +39,14 @@ import {
   effectShadowToTailwind,
   shadowEffectsFromToken,
 } from "./main/utils/effectsHelpers";
+import { getTag, extractNodeProperties } from "./main/utils/nodeProperties";
 import {
-  nodeSize,
-  getTag,
-  extractNodeProperties,
-} from "./main/utils/nodeProperties";
+  parseFontStack,
+  resolveFontFromFamilies,
+} from "./main/utils/fontHelpers";
+import { applySolidColor } from "./main/utils/paintHelpers";
 import { tailwindColorMap } from "./main/tokens/tailwindColorMap";
 import { tokenRegistry } from "./main/tokens/tailwindTokenRegistry";
-
-// === Border width mapping ===
-const borderWidthMap: Record<number, string> = {
-  1: "1",
-  2: "2",
-  4: "4",
-  8: "8",
-};
 
 /**
  * Convert a hex color to its closest Tailwind CSS class name
@@ -110,69 +105,12 @@ if (figma.editorType === "figma") {
     ],
   };
   //testing new classroom push
-  async function getAvailableFontsCached(): Promise<Font[]> {
+  const getAvailableFontsCached = async (): Promise<Font[]> => {
     if (!availableFontsCache) {
       availableFontsCache = await figma.listAvailableFontsAsync();
     }
     return availableFontsCache;
-  }
-
-  function parseFontStack(fontStack: string): string[] {
-    const genericFamilies = new Set([
-      "ui-sans-serif",
-      "ui-serif",
-      "ui-monospace",
-      "system-ui",
-      "sans-serif",
-      "serif",
-      "monospace",
-      "-apple-system",
-      "blinkmacsystemfont",
-      "apple color emoji",
-      "segoe ui emoji",
-      "segoe ui symbol",
-      "noto color emoji",
-    ]);
-
-    return fontStack
-      .split(",")
-      .map((part) => part.trim().replace(/^['\"]|['\"]$/g, ""))
-      .filter(Boolean)
-      .filter((family) => !genericFamilies.has(family.toLowerCase()));
-  }
-
-  function resolveFontFromFamilies(
-    availableFonts: Font[],
-    families: string[],
-  ): FontName | null {
-    const preferredStyles = ["Regular", "Book", "Roman", "Normal", "Medium"];
-
-    for (const family of families) {
-      const matching = availableFonts.filter(
-        (font) => font.fontName.family.toLowerCase() === family.toLowerCase(),
-      );
-      if (matching.length === 0) continue;
-
-      for (const style of preferredStyles) {
-        const preferred = matching.find(
-          (font) => font.fontName.style.toLowerCase() === style.toLowerCase(),
-        );
-        if (preferred) {
-          return {
-            family: preferred.fontName.family,
-            style: preferred.fontName.style,
-          };
-        }
-      }
-
-      return {
-        family: matching[0].fontName.family,
-        style: matching[0].fontName.style,
-      };
-    }
-
-    return null;
-  }
+  };
 
   // This pattern validates full 6-digit hex color strings.
   const hexPattern = /^#([a-f\d]{6})$/i;
@@ -180,7 +118,7 @@ if (figma.editorType === "figma") {
   figma.showUI(__uiFiles__.main, compactSize);
 
   // This function loads custom token data from persistent plugin storage.
-  async function loadCustomTokensFromStorage() {
+  const loadCustomTokensFromStorage = async () => {
     const colors = await figma.clientStorage.getAsync(
       CUSTOM_COLORS_STORAGE_KEY,
     );
@@ -221,10 +159,10 @@ if (figma.editorType === "figma") {
         },
       );
     }
-  }
+  };
 
   // This function posts current custom token data to the UI iframe.
-  async function postCustomTokensToUI() {
+  const postCustomTokensToUI = async () => {
     const availableFonts = await getAvailableFontsCached();
     const availableFontFamilies = Array.from(
       new Set(
@@ -242,7 +180,7 @@ if (figma.editorType === "figma") {
       gradients: customGradientsStore,
       availableFontFamilies,
     });
-  }
+  };
 
   // This startup flow loads and sends custom tokens when UI opens.
   void (async () => {
@@ -250,7 +188,7 @@ if (figma.editorType === "figma") {
     await postCustomTokensToUI();
   })();
 
-  function pushSelectionUpdate(node: SceneNode) {
+  const pushSelectionUpdate = (node: SceneNode) => {
     const props = extractNodeProperties(node);
     const html = convertNode(node, 0);
     const tailwind = convertNodeTailwind(node, 0);
@@ -262,7 +200,7 @@ if (figma.editorType === "figma") {
       tailwind,
       reactTailwind,
     });
-  }
+  };
 
   figma.ui.onmessage = async (message) => {
     if (!message || !message.type) return;
@@ -566,24 +504,21 @@ if (figma.editorType === "figma") {
         return;
       }
 
-      // Apply based on property type fill
-      if (property === "stroke" && "strokes" in node) {
-        const strokePaint: SolidPaint = {
-          type: "SOLID",
-          color: figmaColor,
-          opacity: 1,
-        };
-        (node as any).strokes = [strokePaint];
+      const appliedProperty = applySolidColor(
+        node as SceneNode,
+        property === "stroke" ? "stroke" : "fill",
+        figmaColor,
+      );
+      if (appliedProperty === "stroke") {
         node.setPluginData("applied-color-token", `${colorName}/${shade}`);
         node.setPluginData("tailwind-class", `border-${colorName}-${shade}`);
         figma.notify(`Applied stroke color: ${colorName}-${shade}`);
-      } else if ("fills" in node) {
-        // Default to fill
-        (node as any).fills = [
-          { type: "SOLID", color: figmaColor, opacity: 1 },
-        ];
+      } else if (appliedProperty === "fill") {
         node.setPluginData("applied-color-token", `${colorName}/${shade}`);
         node.setPluginData("tailwind-class", `bg-${colorName}-${shade}`);
+      } else {
+        figma.notify("Cannot apply color to this node type");
+        return;
       }
 
       // Re-sync UI with fresh data
@@ -608,23 +543,22 @@ if (figma.editorType === "figma") {
         return;
       }
 
-      if (property === "stroke" && "strokes" in node) {
-        const strokePaint: SolidPaint = {
-          type: "SOLID",
-          color: figmaColor,
-          opacity: 1,
-        };
-        (node as any).strokes = [strokePaint];
+      const appliedProperty = applySolidColor(
+        node as SceneNode,
+        property === "stroke" ? "stroke" : "fill",
+        figmaColor,
+      );
+      if (appliedProperty === "stroke") {
         node.setPluginData("applied-color-token", `custom/${colorName}`);
         node.setPluginData("tailwind-class", `border-[${colorHex}]`);
         figma.notify(`Applied custom stroke: ${colorName}`);
-      } else if ("fills" in node) {
-        (node as any).fills = [
-          { type: "SOLID", color: figmaColor, opacity: 1 },
-        ];
+      } else if (appliedProperty === "fill") {
         node.setPluginData("applied-color-token", `custom/${colorName}`);
         node.setPluginData("tailwind-class", `bg-[${colorHex}]`);
         figma.notify(`Applied custom fill: ${colorName}`);
+      } else {
+        figma.notify("Cannot apply color to this node type");
+        return;
       }
 
       pushSelectionUpdate(node as SceneNode);
@@ -1283,77 +1217,12 @@ function convertShapeTailwind(
 ): string {
   const classList: string[] = [];
 
-  // layer name as class
-  if (node.name) {
-    classList.push(nameToClass(node.name, `node-${node.id}`));
-  }
-
-  // Width and height
-  const _size = nodeSize(node as any);
-  // Width
-  if (_size.width === "fill") {
-    classList.push("w-full");
-  } else if (_size.width === null) {
-    classList.push("w-auto");
-  } else {
-    classList.push(pxToSize(_size.width as number, "w"));
-  }
-  // Height
-  if (_size.height === "fill") {
-    classList.push("h-full");
-  } else if (_size.height === null) {
-    classList.push("h-auto");
-  } else {
-    classList.push(pxToSize(_size.height as number, "h"));
-  }
-
-  // Background color
-  const fill = getFillColor(node);
-  if (fill) classList.push(colorToTailwind(fill, "bg"));
-
-  // Check parent flex container
-  const isParentFlex =
-    parent && "layoutMode" in parent && (parent as any).layoutMode !== "NONE";
-  if ("x" in node && "y" in node && !isParentFlex) {
-    classList.push("absolute");
-    classList.push(pxToPosition(node.x, "left"));
-    classList.push(pxToPosition(node.y, "top"));
-  }
-
-  // Border radius
-  if ("cornerRadius" in node) {
-    const radiusClass = radiusToTailwind((node as any).cornerRadius);
-    if (radiusClass) classList.push(radiusClass);
-  }
-
-  // Stroke/Border
-  const stroke = getStroke(node);
-  if (stroke) {
-    if (stroke.position === "OUTSIDE") {
-      const ringWidth = findClosest(stroke.width, borderWidthMap);
-      if (ringWidth) classList.push(`ring-${ringWidth}`);
-      else classList.push(`ring-[${stroke.width}px]`);
-      const ringColor = colorToTailwind(stroke.color, "border").replace(
-        /^border-/,
-        "ring-",
-      );
-      classList.push(ringColor);
-      if (stroke.opacity < 1) {
-        const op = opacityToTailwind(stroke.opacity);
-        if (op) classList.push(`ring-opacity-${op}`);
-      }
-    } else {
-      classList.push(borderWidthToTailwind(stroke.width));
-      classList.push(colorToTailwind(stroke.color, "border"));
-      if (stroke.opacity < 1) {
-        const op = opacityToTailwind(stroke.opacity);
-        if (op) classList.push(`border-opacity-${op}`);
-      }
-      if (stroke.position === "INSIDE") {
-        classList.push("stroke-inside");
-      }
-    }
-  }
+  addNodeNameClass(node, classList);
+  addNodeSizeClasses(node, classList);
+  addNodeBackgroundClass(node, classList, colorToTailwind);
+  addNodePositionClasses(node, parent, classList, false);
+  addNodeRadiusClass(node, classList);
+  addNodeStrokeClasses(node, classList, colorToTailwind);
 
   // Layout grow / self alignment for auto-layout children
   if ((node as any).layoutGrow && (node as any).layoutGrow > 0) {
@@ -1470,67 +1339,12 @@ function convertFrameTailwind(
 ): string {
   const classList: string[] = [];
 
-  if (node.name) {
-    classList.push(nameToClass(node.name, `node-${node.id}`));
-  }
-
-  // Width and height
-  const _size = nodeSize(node as any);
-  if (_size.width === "fill") classList.push("w-full");
-  else if (_size.width === null) classList.push("w-auto");
-  else classList.push(pxToSize(_size.width as number, "w"));
-
-  if (_size.height === "fill") classList.push("h-full");
-  else if (_size.height === null) classList.push("h-auto");
-  else classList.push(pxToSize(_size.height as number, "h"));
-
-  // Positioning
-  const isParentFlex =
-    parent && "layoutMode" in parent && (parent as any).layoutMode !== "NONE";
-  if ("x" in node && "y" in node && !isParentFlex) {
-    classList.push("absolute");
-    classList.push(pxToPosition(node.x, "left"));
-    classList.push(pxToPosition(node.y, "top"));
-  } else {
-    classList.push("relative");
-  }
-
-  // Background color
-  const fill = getFillColor(node);
-  if (fill) classList.push(colorToTailwind(fill, "bg"));
-
-  // Border radius
-  if ("cornerRadius" in node) {
-    const radiusClass = radiusToTailwind((node as any).cornerRadius);
-    if (radiusClass) classList.push(radiusClass);
-  }
-
-  // Stroke/Border
-  const stroke = getStroke(node);
-  if (stroke) {
-    if (stroke.position === "OUTSIDE") {
-      const ringWidth = findClosest(stroke.width, borderWidthMap);
-      if (ringWidth) classList.push(`ring-${ringWidth}`);
-      else classList.push(`ring-[${stroke.width}px]`);
-      const ringColor = colorToTailwind(stroke.color, "border").replace(
-        /^border-/,
-        "ring-",
-      );
-      classList.push(ringColor);
-      if (stroke.opacity < 1) {
-        const op = opacityToTailwind(stroke.opacity);
-        if (op) classList.push(`ring-opacity-${op}`);
-      }
-    } else {
-      classList.push(borderWidthToTailwind(stroke.width));
-      classList.push(colorToTailwind(stroke.color, "border"));
-      if (stroke.opacity < 1) {
-        const op = opacityToTailwind(stroke.opacity);
-        if (op) classList.push(`border-opacity-${op}`);
-      }
-      if (stroke.position === "INSIDE") classList.push("stroke-inside");
-    }
-  }
+  addNodeNameClass(node, classList);
+  addNodeSizeClasses(node, classList);
+  addNodePositionClasses(node, parent, classList, true);
+  addNodeBackgroundClass(node, classList, colorToTailwind);
+  addNodeRadiusClass(node, classList);
+  addNodeStrokeClasses(node, classList, colorToTailwind);
 
   // Padding
   classList.push(...paddingToTailwind((node as any).padding));

@@ -202,6 +202,12 @@ export function borderWidthToTailwind(width: number): string {
   return `border-[${width}px]`;
 }
 
+export function ringWidthToTailwind(width: number): string {
+  const borderWidthClass = findClosest(width, borderWidthMap);
+  if (borderWidthClass) return `ring-${borderWidthClass}`;
+  return `ring-[${width}px]`;
+}
+
 export function opacityToTailwind(opacity: number): string {
   if (opacity >= 1) return "";
   const percent = Math.round(opacity * 100);

@@ -214,6 +214,12 @@ export function borderWidthToTailwind(width) {
         return `border-${borderWidthClass}`;
     return `border-[${width}px]`;
 }
+export function ringWidthToTailwind(width) {
+    const borderWidthClass = findClosest(width, borderWidthMap);
+    if (borderWidthClass)
+        return `ring-${borderWidthClass}`;
+    return `ring-[${width}px]`;
+}
 export function opacityToTailwind(opacity) {
     if (opacity >= 1)
         return "";
