@@ -1,3 +1,7 @@
+import { toReactTailwindComponent } from "./main/codegen/reactTailwind";
+import { findClosest } from "./main/utils/findClosest";
+import { nameToClass } from "./main/utils/nameToClass";
+
 // === Font size mapping ===
 const fontSizeMap: Record<number, string> = {
   12: "xs", // 0.75rem
@@ -409,55 +413,10 @@ const tailwindColorMap: Record<string, string> = {
   "#4c0519": "rose-950",
 };
 
-/**
- * Find closest Tailwind value from a map with tolerance
- * Snaps to nearest value within tolerance (default +-2px)
- * Returns closest match otherwise
- */
-function findClosest(
-  value: number,
-  map: Record<number, string>,
-  tolerance: number = 2,
-): string | null {
-  const keys = Object.keys(map)
-    .map(Number)
-    .sort((a, b) => a - b);
-  if (keys.length === 0) return null;
-
-  // 1. Exact match
-  if (map[value]) return map[value];
-
-  // 2. Within range
-  for (const key of keys) {
-    if (Math.abs(key - value) <= tolerance) {
-      return map[key];
-    }
-  }
-
-  // 3. Closest match
-  let closest = keys[0];
-  for (const key of keys) {
-    if (Math.abs(key - value) < Math.abs(closest - value)) {
-      closest = key;
-    }
-  }
-  return map[closest] || null;
-}
-
 function pxToSize(px: number, prefix: string = "w"): string {
   const tailwindClass = findClosest(px, spacingMap);
   if (tailwindClass) return `${prefix}-${tailwindClass}`;
   return `${prefix}-[${px}px]`;
-}
-
-// node name
-function nameToClass(name: string, fallback: string): string {
-  const trimmed = (name || "").trim();
-  const slug = trimmed
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return slug || fallback;
 }
 
 // Determine node sizing (HUG / FILL / fixed)
@@ -3372,31 +3331,6 @@ function convertFrameTailwind(
   return `${indent(level)}<${htmlTag} class="${classList
     .filter(Boolean)
     .join(" ")}">\n${childrenHtml}${indent(level)}</${htmlTag}>\n`;
-}
-
-function escapeJsxText(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/{/g, "&#123;")
-    .replace(/}/g, "&#125;");
-}
-
-function toReactTailwindComponent(tailwindHtml: string): string {
-  const normalized = tailwindHtml
-    .replace(/\bclass=/g, "className=")
-    .replace(/>([^<]*)</g, (_match, textContent: string) => {
-      return `>${escapeJsxText(textContent)}<`;
-    })
-    .trimEnd();
-
-  const indentedBody = normalized
-    .split("\n")
-    .map((line) => (line.length > 0 ? `      ${line}` : line))
-    .join("\n");
-
-  return `export default function GeneratedComponent() {\n  return (\n${indentedBody}\n  );\n}\n`;
 }
 
 function convertNodeReactTailwind(node: SceneNode, level: number = 0): string {
