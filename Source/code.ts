@@ -75,7 +75,7 @@ if (figma.editorType === "figma") {
   const CUSTOM_GRADIENTS_STORAGE_KEY = "codegen.custom.tokens.gradients.v1";
 
   // This object caches custom colors for fast UI sync.
-  let customColorsStore: Record<string, string> = {};
+  let customColorsStore: Record<string, string> = {}; //record used for matching exactly key-value pairing
   // This object caches custom gradients for fast UI sync.
   type CustomGradientToken = { from: string; to: string; stops?: string[] };
   let customGradientsStore: Record<string, CustomGradientToken> = {};
@@ -161,7 +161,7 @@ if (figma.editorType === "figma") {
     }
   };
 
-  // This function posts current custom token data to the UI iframe.
+  // This function posts current custom token data to the UI frame.
   const postCustomTokensToUI = async () => {
     const availableFonts = await getAvailableFontsCached();
     const availableFontFamilies = Array.from(

@@ -494,7 +494,7 @@ function toW3CTokens(node, path = []) {
     }
     return node;
 }
-// Converts all raw Tailwind tokens to W3C Design Token Format 2025.10
+// Converts all raw Tailwind tokens to W3C Design Token Format
 export const TAILWIND_TOKENS = toW3CTokens(RAW_TAILWIND_TOKENS);
 /**
  * TokenRegistry manages access to design tokens
