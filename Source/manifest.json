@@ -14,7 +14,8 @@
 
   "codegenLanguages": [
     { "label": "HTML", "value": "HTML" },
-    { "label": "Tailwind HTML", "value": "TAILWIND_HTML" }
+    { "label": "Tailwind HTML", "value": "TAILWIND_HTML" },
+    { "label": "React Tailwind", "value": "REACT_TAILWIND" }
   ],
 
   "documentAccess": "dynamic-page",

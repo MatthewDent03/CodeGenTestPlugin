@@ -4,10 +4,12 @@
   "description": "Your Figma Plugin",
   "main": "code.js",
   "scripts": {
-    "build": "tsc -p Source/tsconfig.json",
+    "typecheck": "tsc -p Source/tsconfig.json --noEmit",
+    "bundle": "esbuild Source/code.ts --bundle --platform=browser --format=iife --target=es2016 --outfile=Source/code.js",
+    "build": "npm run typecheck && npm run bundle",
     "lint": "eslint --ext .ts,.tsx --ignore-pattern node_modules .",
     "lint:fix": "eslint --ext .ts,.tsx --ignore-pattern node_modules --fix .",
-    "watch": "npm run build -- --watch"
+    "watch": "esbuild Source/code.ts --bundle --platform=browser --format=iife --target=es2016 --outfile=Source/code.js --watch"
   },
   "author": "",
   "license": "",
@@ -28,7 +30,7 @@
     ],
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
-      "project": "./tsconfig.json"
+      "project": "./Source/tsconfig.json"
     },
     "root": true,
     "rules": {
