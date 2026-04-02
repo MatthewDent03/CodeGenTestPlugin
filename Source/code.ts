@@ -67,8 +67,12 @@ function colorToTailwind(
 // === PLUGIN UI (FIGMA MODE) ===
 // Open the panel and stream basic selection info to the iframe.
 if (figma.editorType === "figma") {
-  const compactSize = { width: 380, height: 500 };
-  const popoutSize = { width: 760, height: 720 };
+  // Docked mode: close to Figma right-sidebar proportions (narrow + tall).
+  const compactSize = { width: 380, height: 920 };
+  // Popout mode: keep a wider workspace for longer token/code workflows.
+  const popoutSize = { width: 860, height: 920 };
+  const minUiSize = { width: 320, height: 640 };
+  const maxUiSize = { width: 1280, height: 1600 };
   // This key stores custom color tokens in plugin storage.
   const CUSTOM_COLORS_STORAGE_KEY = "codegen.custom.tokens.colors.v1";
   // This key stores custom gradient tokens in plugin storage.
@@ -202,12 +206,52 @@ if (figma.editorType === "figma") {
     });
   };
 
+  let pendingUndoSelectionRestoreId: string | null = null;
+
   figma.ui.onmessage = async (message) => {
     if (!message || !message.type) return;
 
     if (message.type === "toggle-popout") {
       const nextSize = message.poppedOut ? popoutSize : compactSize;
       figma.ui.resize(nextSize.width, nextSize.height);
+      return;
+    }
+
+    if (message.type === "resize-ui") {
+      const requestedWidth = Number(message.width);
+      const requestedHeight = Number(message.height);
+      if (
+        !Number.isFinite(requestedWidth) ||
+        !Number.isFinite(requestedHeight)
+      ) {
+        return;
+      }
+
+      const nextWidth = Math.round(
+        Math.max(minUiSize.width, Math.min(maxUiSize.width, requestedWidth)),
+      );
+      const nextHeight = Math.round(
+        Math.max(minUiSize.height, Math.min(maxUiSize.height, requestedHeight)),
+      );
+
+      figma.ui.resize(nextWidth, nextHeight);
+      return;
+    }
+
+    if (message.type === "undo-last-change") {
+      const figmaWithUndo = figma as PluginAPI & {
+        triggerUndo?: () => void;
+      };
+
+      const selectedBeforeUndo = figma.currentPage.selection[0];
+      pendingUndoSelectionRestoreId = selectedBeforeUndo?.id || null;
+
+      if (typeof figmaWithUndo.triggerUndo === "function") {
+        figmaWithUndo.triggerUndo();
+      } else {
+        pendingUndoSelectionRestoreId = null;
+        figma.notify("Undo unavailable. Use Ctrl+Z");
+      }
       return;
     }
 
@@ -1029,9 +1073,25 @@ if (figma.editorType === "figma") {
     const node = figma.currentPage.selection[0];
 
     if (!node) {
+      if (pendingUndoSelectionRestoreId) {
+        const restoreCandidate = figma.getNodeById(
+          pendingUndoSelectionRestoreId,
+        );
+        pendingUndoSelectionRestoreId = null;
+
+        if (restoreCandidate && restoreCandidate.type !== "PAGE") {
+          const restorableNode = restoreCandidate as SceneNode;
+          figma.currentPage.selection = [restorableNode];
+          pushSelectionUpdate(restorableNode);
+          return;
+        }
+      }
+
       figma.ui.postMessage({ type: "no-selection" });
       return;
     }
+
+    pendingUndoSelectionRestoreId = null;
 
     pushSelectionUpdate(node);
   });
