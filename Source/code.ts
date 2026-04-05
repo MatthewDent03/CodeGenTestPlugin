@@ -30,15 +30,15 @@ import {
   getShadowCSS,
 } from "./main/utils/cssHelpers";
 import {
+  effectShadowToTailwind,
+  shadowEffectsFromToken,
+} from "./main/utils/effectsHelpers";
+import {
   getFontWeightAndStyle,
   getAlignmentClasses,
   getWrappingClasses,
   layoutModeToTailwind,
 } from "./main/utils/layoutHelpers";
-import {
-  effectShadowToTailwind,
-  shadowEffectsFromToken,
-} from "./main/utils/effectsHelpers";
 import { getTag, extractNodeProperties } from "./main/utils/nodeProperties";
 import {
   parseFontStack,
@@ -1391,6 +1391,51 @@ function convertTextNodeTailwind(
   }</${htmlTag}>\n`;
 }
 
+function getNodePaddingForTailwind(
+  node: SceneNode,
+):
+  | number
+  | { top: number; right: number; bottom: number; left: number }
+  | null {
+  const hasSidePadding =
+    "paddingTop" in node &&
+    "paddingRight" in node &&
+    "paddingBottom" in node &&
+    "paddingLeft" in node;
+
+  if (hasSidePadding) {
+    const top = Number((node as any).paddingTop) || 0;
+    const right = Number((node as any).paddingRight) || 0;
+    const bottom = Number((node as any).paddingBottom) || 0;
+    const left = Number((node as any).paddingLeft) || 0;
+
+    if (top === 0 && right === 0 && bottom === 0 && left === 0) return null;
+
+    if (top === right && right === bottom && bottom === left) {
+      return top;
+    }
+
+    return { top, right, bottom, left };
+  }
+
+  // Backward compatibility for any code path using a consolidated padding field
+  if ("padding" in node) {
+    const padding = (node as any).padding;
+    if (typeof padding === "number" && padding > 0) return padding;
+    if (padding && typeof padding === "object") {
+      const top = Number(padding.top) || 0;
+      const right = Number(padding.right) || 0;
+      const bottom = Number(padding.bottom) || 0;
+      const left = Number(padding.left) || 0;
+      if (top === 0 && right === 0 && bottom === 0 && left === 0) return null;
+      if (top === right && right === bottom && bottom === left) return top;
+      return { top, right, bottom, left };
+    }
+  }
+
+  return null;
+}
+
 function convertFrameTailwind(
   node: FrameNode,
   htmlTag: string,
@@ -1407,7 +1452,7 @@ function convertFrameTailwind(
   addNodeStrokeClasses(node, classList, colorToTailwind);
 
   // Padding
-  classList.push(...paddingToTailwind((node as any).padding));
+  classList.push(...paddingToTailwind(getNodePaddingForTailwind(node)));
 
   // Auto-layout (flex direction and gap)
   if ("layoutMode" in node) {

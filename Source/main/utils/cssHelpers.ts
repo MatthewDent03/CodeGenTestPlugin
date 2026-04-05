@@ -51,17 +51,19 @@ export function getStroke(
 // === PADDING HELPER ===
 // Handle both uniform and mixed padding values
 export function getPaddingCSS(node: SceneNode): string {
-  if (!("padding" in node)) return "";
+  const hasSidePadding =
+    "paddingTop" in node &&
+    "paddingRight" in node &&
+    "paddingBottom" in node &&
+    "paddingLeft" in node;
 
-  const padding = (node as any).padding;
-  if (!padding) return "";
+  if (hasSidePadding) {
+    const top = Number((node as any).paddingTop) || 0;
+    const right = Number((node as any).paddingRight) || 0;
+    const bottom = Number((node as any).paddingBottom) || 0;
+    const left = Number((node as any).paddingLeft) || 0;
 
-  // Check padding object
-  if (typeof padding === "object" && padding !== null) {
-    const top = padding.top || 0;
-    const right = padding.right || 0;
-    const bottom = padding.bottom || 0;
-    const left = padding.left || 0;
+    if (top === 0 && right === 0 && bottom === 0 && left === 0) return "";
 
     // all equal - single value
     if (top === right && right === bottom && bottom === left) {
@@ -72,9 +74,27 @@ export function getPaddingCSS(node: SceneNode): string {
     return ` padding:${top}px ${right}px ${bottom}px ${left}px;`;
   }
 
-  // If number -  uniform padding
-  if (typeof padding === "number") {
-    return ` padding:${padding}px;`;
+  // Backward compatibility for custom node mocks with a `padding` field
+  if ("padding" in node) {
+    const padding = (node as any).padding;
+    if (!padding) return "";
+
+    if (typeof padding === "object" && padding !== null) {
+      const top = padding.top || 0;
+      const right = padding.right || 0;
+      const bottom = padding.bottom || 0;
+      const left = padding.left || 0;
+
+      if (top === right && right === bottom && bottom === left) {
+        return ` padding:${top}px;`;
+      }
+
+      return ` padding:${top}px ${right}px ${bottom}px ${left}px;`;
+    }
+
+    if (typeof padding === "number") {
+      return ` padding:${padding}px;`;
+    }
   }
 
   return "";
