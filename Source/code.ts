@@ -200,6 +200,9 @@ if (figma.editorType === "figma") {
     figma.ui.postMessage({
       type: "selection-update",
       data: props,
+      selectionIds: figma.currentPage.selection.map(
+        (selectedNode) => selectedNode.id,
+      ),
       html,
       tailwind,
       reactTailwind,
@@ -316,6 +319,369 @@ if (figma.editorType === "figma") {
       );
       await postCustomTokensToUI();
       figma.notify(`Saved custom gradient: ${tokenName}`);
+      return;
+    }
+
+    if (message.type === "apply-layout-action") {
+      const nodeIds = Array.isArray(message.nodeIds)
+        ? (message.nodeIds as string[]).filter(Boolean)
+        : message.nodeId
+          ? [String(message.nodeId)]
+          : [];
+      const action = String(message.action || "").trim();
+
+      if (!action || nodeIds.length === 0) return;
+
+      if (action === "auto-layout") {
+        const selectedNodes: SceneNode[] = [];
+
+        const setTextChildrenLeftAligned = (sceneNode: SceneNode): void => {
+          if (sceneNode.type === "TEXT") {
+            (sceneNode as TextNode).textAlignHorizontal = "LEFT";
+          }
+
+          if ("children" in sceneNode) {
+            for (const child of sceneNode.children) {
+              setTextChildrenLeftAligned(child as SceneNode);
+            }
+          }
+        };
+
+        const getVerticalSpacing = (nodes: SceneNode[]): number => {
+          if (nodes.length < 2) return 0;
+
+          const ordered = [...nodes].sort(
+            (leftNode, rightNode) => leftNode.y - rightNode.y,
+          );
+          const firstNode = ordered[0];
+          const secondNode = ordered[1];
+          const gap = secondNode.y - (firstNode.y + firstNode.height);
+          return Number.isFinite(gap) && gap > 0 ? Math.round(gap) : 0;
+        };
+
+        for (const nodeId of nodeIds) {
+          const node = await figma.getNodeByIdAsync(nodeId);
+          if (!node || node.type === "DOCUMENT" || node.type === "PAGE") {
+            continue;
+          }
+          if ("locked" in node && node.locked) {
+            continue;
+          }
+          selectedNodes.push(node as SceneNode);
+        }
+
+        if (selectedNodes.length === 0) {
+          figma.notify("Selected node does not support auto layout");
+          return;
+        }
+
+        const isSingleExistingFrame =
+          selectedNodes.length === 1 &&
+          "layoutMode" in selectedNodes[0] &&
+          "primaryAxisAlignItems" in selectedNodes[0] &&
+          "counterAxisAlignItems" in selectedNodes[0];
+
+        if (isSingleExistingFrame) {
+          const frameNode = selectedNodes[0] as FrameNode & {
+            layoutMode?: string;
+            primaryAxisAlignItems?: string;
+            counterAxisAlignItems?: string;
+            layoutWrap?: string;
+            primaryAxisSizingMode?: string;
+            counterAxisSizingMode?: string;
+            itemSpacing?: number;
+          };
+
+          const frameChildren =
+            "children" in frameNode ? frameNode.children : [];
+          const spacing = getVerticalSpacing(frameChildren as SceneNode[]);
+
+          frameNode.layoutMode = "VERTICAL";
+          frameNode.primaryAxisAlignItems = "MIN";
+          frameNode.counterAxisAlignItems = "MIN";
+          frameNode.itemSpacing = spacing;
+          frameNode.fills = [];
+          if ("layoutWrap" in frameNode) frameNode.layoutWrap = "NO_WRAP";
+          if ("primaryAxisSizingMode" in frameNode) {
+            frameNode.primaryAxisSizingMode = "AUTO";
+          }
+          if ("counterAxisSizingMode" in frameNode) {
+            frameNode.counterAxisSizingMode = "AUTO";
+          }
+
+          for (const child of frameChildren) {
+            setTextChildrenLeftAligned(child as SceneNode);
+          }
+
+          figma.notify("Applied auto layout");
+          pushSelectionUpdate(frameNode);
+          return;
+        }
+
+        const firstNode = selectedNodes[0];
+        const parentNode = firstNode.parent;
+        if (
+          !parentNode ||
+          !("children" in parentNode) ||
+          !("insertChild" in parentNode)
+        ) {
+          figma.notify("Selected node does not support auto layout");
+          return;
+        }
+
+        if (!selectedNodes.every((node) => node.parent === parentNode)) {
+          figma.notify(
+            "Select nodes with the same parent to apply auto layout",
+          );
+          return;
+        }
+
+        const parentChildren = parentNode.children as SceneNode[];
+        const originalOrder = new Map<string, number>();
+        parentChildren.forEach((child, index) => {
+          originalOrder.set(child.id, index);
+        });
+
+        const orderedNodes = [...selectedNodes].sort((leftNode, rightNode) => {
+          const leftOrder = originalOrder.get(leftNode.id) ?? 0;
+          const rightOrder = originalOrder.get(rightNode.id) ?? 0;
+          return leftOrder - rightOrder;
+        });
+        const spacing = getVerticalSpacing(orderedNodes);
+
+        const insertIndex = originalOrder.get(firstNode.id) ?? 0;
+        const autoLayoutFrame = figma.createFrame();
+        autoLayoutFrame.name = `${firstNode.name} Auto Layout`;
+        parentNode.insertChild(insertIndex, autoLayoutFrame);
+        autoLayoutFrame.x = firstNode.x;
+        autoLayoutFrame.y = firstNode.y;
+
+        for (const childNode of orderedNodes) {
+          autoLayoutFrame.appendChild(childNode);
+        }
+
+        autoLayoutFrame.layoutMode = "VERTICAL";
+        autoLayoutFrame.primaryAxisAlignItems = "MIN";
+        autoLayoutFrame.counterAxisAlignItems = "MIN";
+        autoLayoutFrame.itemSpacing = spacing;
+        autoLayoutFrame.fills = [];
+        autoLayoutFrame.layoutWrap = "NO_WRAP";
+        autoLayoutFrame.primaryAxisSizingMode = "AUTO";
+        autoLayoutFrame.counterAxisSizingMode = "AUTO";
+
+        for (const childNode of orderedNodes) {
+          setTextChildrenLeftAligned(childNode);
+        }
+
+        figma.currentPage.selection = [autoLayoutFrame];
+        figma.notify(
+          selectedNodes.length > 1
+            ? `Applied auto layout to ${selectedNodes.length} nodes`
+            : "Applied auto layout",
+        );
+        pushSelectionUpdate(autoLayoutFrame);
+        return;
+      }
+
+      const alignmentMap: Record<string, { primary: string; counter: string }> =
+        {
+          TOP_LEFT: { primary: "MIN", counter: "MIN" },
+          TOP_CENTER: { primary: "MIN", counter: "CENTER" },
+          TOP_RIGHT: { primary: "MIN", counter: "MAX" },
+          CENTER_LEFT: { primary: "CENTER", counter: "MIN" },
+          CENTER_CENTER: { primary: "CENTER", counter: "CENTER" },
+          CENTER_RIGHT: { primary: "CENTER", counter: "MAX" },
+          BOTTOM_LEFT: { primary: "MAX", counter: "MIN" },
+          BOTTOM_CENTER: { primary: "MAX", counter: "CENTER" },
+          BOTTOM_RIGHT: { primary: "MAX", counter: "MAX" },
+          BETWEEN_LEFT: { primary: "SPACE_BETWEEN", counter: "MIN" },
+          BETWEEN_CENTER: { primary: "SPACE_BETWEEN", counter: "CENTER" },
+          BETWEEN_RIGHT: { primary: "SPACE_BETWEEN", counter: "MAX" },
+        };
+
+      let updatedCount = 0;
+      let skippedCount = 0;
+
+      for (const nodeId of nodeIds) {
+        const node = await figma.getNodeByIdAsync(nodeId);
+        if (!node || node.type === "DOCUMENT" || node.type === "PAGE") {
+          skippedCount += 1;
+          continue;
+        }
+
+        if ("locked" in node && node.locked) {
+          skippedCount += 1;
+          continue;
+        }
+
+        const mutableNode = node as SceneNode & {
+          layoutMode?: string;
+          primaryAxisAlignItems?: string;
+          counterAxisAlignItems?: string;
+          layoutWrap?: string;
+          primaryAxisSizingMode?: string;
+          counterAxisSizingMode?: string;
+          layoutGrow?: number;
+          layoutAlign?: string;
+        };
+
+        const supportsLayout = "layoutMode" in node;
+        const supportsAlignment =
+          "primaryAxisAlignItems" in node || "counterAxisAlignItems" in node;
+        const supportsSizing =
+          "layoutGrow" in node ||
+          "layoutAlign" in node ||
+          "primaryAxisSizingMode" in node ||
+          "counterAxisSizingMode" in node;
+
+        if (action === "auto-layout") {
+          if (!supportsLayout) {
+            skippedCount += 1;
+            continue;
+          }
+
+          mutableNode.layoutMode = "VERTICAL";
+          if ("primaryAxisAlignItems" in node)
+            mutableNode.primaryAxisAlignItems = "MIN";
+          if ("counterAxisAlignItems" in node)
+            mutableNode.counterAxisAlignItems = "MIN";
+          if ("layoutWrap" in node) mutableNode.layoutWrap = "NO_WRAP";
+          if ("primaryAxisSizingMode" in node)
+            mutableNode.primaryAxisSizingMode = "AUTO";
+          if ("counterAxisSizingMode" in node)
+            mutableNode.counterAxisSizingMode = "AUTO";
+          updatedCount += 1;
+          continue;
+        }
+
+        if (action === "flow-direction") {
+          if (!supportsLayout) {
+            skippedCount += 1;
+            continue;
+          }
+
+          const direction = String(
+            message.direction || "VERTICAL",
+          ).toUpperCase();
+          mutableNode.layoutMode =
+            direction === "HORIZONTAL" ? "HORIZONTAL" : "VERTICAL";
+          if ("layoutWrap" in node) mutableNode.layoutWrap = "NO_WRAP";
+          updatedCount += 1;
+          continue;
+        }
+
+        if (action === "alignment") {
+          if (!supportsAlignment) {
+            skippedCount += 1;
+            continue;
+          }
+
+          const alignment = String(
+            message.alignment || "TOP_LEFT",
+          ).toUpperCase();
+          const resolvedAlignment =
+            alignmentMap[alignment] || alignmentMap.TOP_LEFT;
+          if ("primaryAxisAlignItems" in node) {
+            mutableNode.primaryAxisAlignItems = resolvedAlignment.primary;
+          }
+          if ("counterAxisAlignItems" in node) {
+            mutableNode.counterAxisAlignItems = resolvedAlignment.counter;
+          }
+          updatedCount += 1;
+          continue;
+        }
+
+        if (action === "sizing") {
+          if (!supportsSizing) {
+            skippedCount += 1;
+            continue;
+          }
+
+          const axis = String(message.axis || "WIDTH").toUpperCase();
+          const sizing = String(message.sizing || "HUG").toUpperCase();
+          const isFill = sizing === "FILL";
+          const parentLayoutMode =
+            node.parent &&
+            node.parent.type !== "DOCUMENT" &&
+            node.parent.type !== "PAGE" &&
+            "layoutMode" in node.parent
+              ? String(
+                  (node.parent as SceneNode & { layoutMode?: string })
+                    .layoutMode,
+                )
+              : "NONE";
+          const layoutBasis =
+            String(mutableNode.layoutMode || "NONE") !== "NONE"
+              ? String(mutableNode.layoutMode)
+              : parentLayoutMode;
+          const axisIsPrimary =
+            (layoutBasis === "HORIZONTAL" && axis === "WIDTH") ||
+            (layoutBasis === "VERTICAL" && axis === "HEIGHT");
+
+          if ("layoutGrow" in node) {
+            mutableNode.layoutGrow = isFill ? 1 : 0;
+          }
+
+          if (axisIsPrimary) {
+            if ("primaryAxisSizingMode" in node) {
+              mutableNode.primaryAxisSizingMode = isFill ? "FIXED" : "AUTO";
+            }
+          } else if ("counterAxisSizingMode" in node) {
+            mutableNode.counterAxisSizingMode = isFill ? "FIXED" : "AUTO";
+          }
+
+          if ("layoutAlign" in node) {
+            mutableNode.layoutAlign = isFill ? "STRETCH" : "MIN";
+          }
+
+          updatedCount += 1;
+          continue;
+        }
+
+        skippedCount += 1;
+      }
+
+      if (updatedCount === 0) {
+        figma.notify("Selected node does not support auto layout");
+        return;
+      }
+
+      if (action === "auto-layout") {
+        figma.notify(
+          updatedCount > 1
+            ? `Applied auto layout to ${updatedCount} nodes`
+            : "Applied auto layout",
+        );
+      } else if (action === "flow-direction") {
+        figma.notify(
+          updatedCount > 1
+            ? `Applied flow direction to ${updatedCount} nodes`
+            : "Applied flow direction",
+        );
+      } else if (action === "alignment") {
+        figma.notify(
+          updatedCount > 1
+            ? `Applied alignment to ${updatedCount} nodes`
+            : "Applied alignment",
+        );
+      } else if (action === "sizing") {
+        figma.notify(
+          updatedCount > 1
+            ? `Applied sizing to ${updatedCount} nodes`
+            : "Applied sizing",
+        );
+      }
+
+      if (skippedCount > 0 && updatedCount > 0) {
+        figma.notify(
+          `Skipped ${skippedCount} unsupported selection${skippedCount === 1 ? "" : "s"}`,
+        );
+      }
+
+      const selected = figma.currentPage.selection[0];
+      if (selected) {
+        pushSelectionUpdate(selected as SceneNode);
+      }
       return;
     }
 

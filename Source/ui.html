@@ -611,6 +611,48 @@
         overflow-y: auto;
       }
 
+      .layout-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px;
+        border: 1px solid #dbe3ef;
+        border-radius: 12px;
+        background: rgba(241, 245, 249, 0.75);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      }
+
+      .layout-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .layout-section-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: #334155;
+        letter-spacing: 0.02em;
+      }
+
+      .layout-note {
+        font-size: 11px;
+        color: #64748b;
+        margin-top: -2px;
+      }
+
+      .layout-grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .layout-grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
       .token-search {
         margin-bottom: 12px;
         position: relative;
@@ -938,6 +980,11 @@
       <button type="button" class="collapsible">Tailwind Color Tokens</button>
       <div class="content">
         <div class="token-tabs" id="token-tabs"></div>
+        <div
+          class="layout-controls"
+          id="layout-controls"
+          style="display: none"
+        ></div>
         <div class="token-search">
           <label class="token-search-label" for="token-search-input"
             >Find a token</label
@@ -1152,6 +1199,7 @@
       const colorSwatches = document.getElementById("color-swatches");
       const childFills = document.getElementById("child-fills");
       const tokenTabs = document.getElementById("token-tabs");
+      const layoutControls = document.getElementById("layout-controls");
       const tokenSearchInput = document.getElementById("token-search-input");
       const colorAlphaFilters = document.getElementById("color-alpha-filters");
       const tokenTree = document.getElementById("token-tree");
@@ -1184,6 +1232,7 @@
 
       let isPoppedOut = false;
       let currentNodeId = null;
+      let currentSelectionIds = [];
       let tokenSearchQuery = "";
       let customColors = {};
       let customGradients = {};
@@ -2094,7 +2143,8 @@
       /* Render token tabs for each category */
       function renderTokenTabs() {
         tokenTabs.innerHTML = "";
-        Object.keys(TAILWIND_TOKENS).forEach((category) => {
+        const categories = [...Object.keys(TAILWIND_TOKENS), "layout"];
+        categories.forEach((category) => {
           const btn = document.createElement("button");
           btn.className = `token-tab ${category === currentTokenCategory ? "active" : ""}`;
           btn.textContent =
@@ -2106,6 +2156,122 @@
           });
           tokenTabs.appendChild(btn);
         });
+      }
+
+      function postLayoutAction(action, extra = {}) {
+        if (!currentSelectionIds.length && !currentNodeId) {
+          console.log("No node selected");
+          return;
+        }
+
+        parent.postMessage(
+          {
+            pluginMessage: {
+              type: "apply-layout-action",
+              nodeIds:
+                currentSelectionIds.length > 0
+                  ? currentSelectionIds
+                  : [currentNodeId],
+              action,
+              ...extra,
+            },
+          },
+          "*",
+        );
+      }
+
+      function renderLayoutControls() {
+        if (!layoutControls) return;
+
+        layoutControls.innerHTML = `
+          <div class="layout-section">
+            <div class="layout-section-title">Auto Layout</div>
+            <button type="button" class="button" id="layout-apply-auto-btn">Apply Auto Layout</button>
+            <div class="layout-note">Defaults to flex flex-col justify-start items-start flex-nowrap.</div>
+          </div>
+          <div class="layout-section">
+            <div class="layout-section-title">Flow Direction</div>
+            <div class="layout-grid-2">
+              <button type="button" class="button" data-layout-action="flow-direction" data-direction="HORIZONTAL">Row</button>
+              <button type="button" class="button" data-layout-action="flow-direction" data-direction="VERTICAL">Column</button>
+            </div>
+          </div>
+          <div class="layout-section">
+            <div class="layout-section-title">Alignment</div>
+            <div class="layout-grid-3">
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="TOP_LEFT">Top Left</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="TOP_CENTER">Top Center</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="TOP_RIGHT">Top Right</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="CENTER_LEFT">Left</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="CENTER_CENTER">Center</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="CENTER_RIGHT">Right</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="BOTTOM_LEFT">Bottom Left</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="BOTTOM_CENTER">Bottom Center</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="BOTTOM_RIGHT">Bottom Right</button>
+            </div>
+          </div>
+          <div class="layout-section">
+            <div class="layout-section-title">Justify Between</div>
+            <div class="layout-grid-3">
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="BETWEEN_LEFT">Left</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="BETWEEN_CENTER">Center</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="BETWEEN_RIGHT">Right</button>
+            </div>
+          </div>
+          <div class="layout-section">
+            <div class="layout-section-title">Width</div>
+            <div class="layout-grid-2">
+              <button type="button" class="button" data-layout-action="sizing" data-axis="WIDTH" data-sizing="FILL">Fill</button>
+              <button type="button" class="button" data-layout-action="sizing" data-axis="WIDTH" data-sizing="HUG">Hug</button>
+            </div>
+          </div>
+          <div class="layout-section">
+            <div class="layout-section-title">Height</div>
+            <div class="layout-grid-2">
+              <button type="button" class="button" data-layout-action="sizing" data-axis="HEIGHT" data-sizing="FILL">Fill</button>
+              <button type="button" class="button" data-layout-action="sizing" data-axis="HEIGHT" data-sizing="HUG">Hug</button>
+            </div>
+          </div>
+        `;
+
+        const applyAutoBtn = document.getElementById("layout-apply-auto-btn");
+        if (applyAutoBtn) {
+          applyAutoBtn.onclick = () => {
+            postLayoutAction("auto-layout");
+          };
+        }
+
+        layoutControls
+          .querySelectorAll("button[data-layout-action]")
+          .forEach((button) => {
+            button.onclick = () => {
+              const action = button.getAttribute("data-layout-action");
+              if (!action) return;
+
+              if (action === "flow-direction") {
+                postLayoutAction("flow-direction", {
+                  direction:
+                    button.getAttribute("data-direction") || "VERTICAL",
+                });
+                return;
+              }
+
+              if (action === "alignment") {
+                postLayoutAction("alignment", {
+                  alignment:
+                    button.getAttribute("data-alignment") || "TOP_LEFT",
+                });
+                return;
+              }
+
+              if (action === "sizing") {
+                postLayoutAction("sizing", {
+                  axis: button.getAttribute("data-axis") || "WIDTH",
+                  sizing: button.getAttribute("data-sizing") || "HUG",
+                });
+              }
+            };
+          });
       }
 
       /* Render token tree with nested colors/shades */
@@ -2134,6 +2300,17 @@
         if (gradientSelector) {
           gradientSelector.style.display =
             currentTokenCategory === "gradients" ? "block" : "none";
+        }
+
+        if (layoutControls) {
+          layoutControls.style.display =
+            currentTokenCategory === "layout" ? "flex" : "none";
+        }
+
+        if (currentTokenCategory === "layout") {
+          if (tokenTree) tokenTree.style.display = "none";
+          renderLayoutControls();
+          return;
         }
 
         if (tokenTree) {
@@ -3256,7 +3433,15 @@
 
       function updateSelection(message) {
         currentNodeId = message.data?.id || null;
-        frameName.textContent = message.data?.name || "Unnamed frame";
+        currentSelectionIds = Array.isArray(message.selectionIds)
+          ? message.selectionIds.filter(Boolean)
+          : currentNodeId
+            ? [currentNodeId]
+            : [];
+        frameName.textContent =
+          currentSelectionIds.length > 1
+            ? `${currentSelectionIds.length} selected layers`
+            : message.data?.name || "Unnamed frame";
         renderProperties(message.data);
         renderChildFills(message.data);
         renderTokenTabs();
@@ -3270,6 +3455,7 @@
 
       function clearSelection() {
         currentNodeId = null;
+        currentSelectionIds = [];
         frameName.textContent = "No selection";
         properties.innerHTML = "";
         childFills.innerHTML = "";
