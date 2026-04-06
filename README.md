@@ -49,7 +49,16 @@ If both commands return versions, continue with `npm install`.
 
 ## Installation
 
-### Option 1: Clone from GitHub
+### Option 1 (Recommended): Clone via SSH
+
+```powershell
+git clone git@github.com:MatthewDent03/CodeGenTestPlugin.git
+cd CodeGenTestPlugin
+git checkout my-code
+git pull origin my-code
+```
+
+### Option 2: Clone via HTTPS (fallback)
 
 ```powershell
 git clone https://github.com/MatthewDent03/CodeGenTestPlugin.git
@@ -60,7 +69,7 @@ git pull origin my-code
 
 This project is tested from the `my-code` branch. Make sure you're on that branch before installing dependencies and building.
 
-### Option 2: Extract from Local Directory
+### Option 3: Extract from Local Directory
 
 ```powershell
 # Navigate to the plugin directory
