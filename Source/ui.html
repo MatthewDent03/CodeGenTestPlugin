@@ -4,6 +4,21 @@
     <meta charset="utf-8" />
     <title>Simple HTML Codegen</title>
     <style>
+      :root {
+        --bg-start: #eef2ff;
+        --bg-end: #f8fafc;
+        --panel-bg: rgba(255, 255, 255, 0.86);
+        --panel-border: #dbe4ff;
+        --text-primary: #1f2937;
+        --text-secondary: #64748b;
+        --accent: #4f46e5;
+        --accent-soft: rgba(79, 70, 229, 0.12);
+        --accent-strong: #4338ca;
+        --ui-zoom: 1;
+        --sticky-hero-top: 8px;
+        --sticky-header-offset: 62px;
+      }
+
       * {
         box-sizing: border-box;
       }
@@ -12,24 +27,159 @@
       body {
         margin: 0;
         padding: 16px;
-        background: #f4f6fb;
-        color: #1f2937;
+        background:
+          radial-gradient(
+            circle at 0% -20%,
+            rgba(99, 102, 241, 0.22),
+            transparent 46%
+          ),
+          radial-gradient(
+            circle at 110% 0%,
+            rgba(14, 165, 233, 0.18),
+            transparent 40%
+          ),
+          linear-gradient(155deg, var(--bg-start), var(--bg-end));
+        color: var(--text-primary);
         font-family:
           Inter,
           system-ui,
           -apple-system,
           "Segoe UI",
           Arial;
+        min-height: 100vh;
+        overflow-x: hidden;
+        zoom: var(--ui-zoom);
+      }
+
+      body.is-resizing,
+      body.is-resizing * {
+        cursor: nwse-resize !important;
+        user-select: none;
+      }
+
+      .ui-resize-handle {
+        position: fixed;
+        right: 8px;
+        bottom: 8px;
+        width: 18px;
+        height: 18px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.85);
+        box-shadow: 0 4px 10px rgba(15, 23, 42, 0.14);
+        cursor: nwse-resize;
+        z-index: 120;
+        backdrop-filter: blur(5px);
+      }
+
+      .ui-resize-handle::before {
+        content: "";
+        position: absolute;
+        right: 3px;
+        bottom: 3px;
+        width: 9px;
+        height: 9px;
+        background: repeating-linear-gradient(
+          135deg,
+          #64748b 0 1px,
+          transparent 1px 3px
+        );
+        opacity: 0.7;
       }
 
       /* === Panel Layout === */
       .panel {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 14px;
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 16px;
         padding: 18px;
         margin-bottom: 16px;
-        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        position: relative;
+        overflow: visible;
+        box-shadow:
+          0 10px 30px rgba(15, 23, 42, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(7px);
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease,
+          border-color 0.2s ease;
+      }
+
+      .panel::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #4338ca, #6366f1 45%, #0ea5e9);
+        opacity: 0.7;
+        border-radius: 16px 16px 0 0;
+        pointer-events: none;
+      }
+
+      .panel:hover {
+        transform: translateY(-1px);
+        border-color: #c7d2fe;
+        box-shadow:
+          0 14px 34px rgba(15, 23, 42, 0.11),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      }
+
+      .panel.panel-hero {
+        padding: 10px 12px 46px;
+        margin-bottom: 10px;
+        border-color: #c7d2fe;
+        background:
+          linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.94),
+            rgba(248, 250, 255, 0.88)
+          ),
+          var(--panel-bg);
+        box-shadow:
+          0 16px 38px rgba(67, 56, 202, 0.16),
+          inset 0 1px 0 rgba(255, 255, 255, 0.88);
+        backdrop-filter: blur(10px);
+      }
+
+      .panel.panel-hero::before {
+        height: 2px;
+        opacity: 0.95;
+      }
+
+      .panel.panel-hero .panel-header {
+        align-items: center;
+        margin-bottom: 4px;
+      }
+
+      .panel.panel-hero .panel-title-group {
+        gap: 0;
+      }
+
+      .panel.panel-hero .title {
+        font-size: 13px;
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: 0.1px;
+        color: #1e1b4b;
+        background: none;
+        -webkit-text-fill-color: currentColor;
+      }
+
+      .panel.panel-hero .subtitle {
+        display: none;
+      }
+
+      .panel.panel-hero #frame-name {
+        font-size: 11px;
+        padding: 3px 8px;
+        margin-top: 0;
+        max-width: 240px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .panel-header {
@@ -43,6 +193,38 @@
       .panel-title-group {
         display: flex;
         flex-direction: column;
+        gap: 2px;
+      }
+
+      .panel-header-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .floating-toolbar {
+        position: sticky;
+        top: 8px;
+        z-index: 160;
+        display: flex;
+        justify-content: flex-end;
+        margin-top: -60px;
+        margin-bottom: 12px;
+        padding-right: 10px;
+        pointer-events: none;
+      }
+
+      .floating-toolbar .panel-header-actions {
+        padding: 6px;
+        border-radius: 14px;
+        border: 1px solid #c7d2fe;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+        backdrop-filter: blur(8px);
+        pointer-events: auto;
+      }
+
+      .panel:not(.panel-hero) {
+        padding-top: 14px;
       }
 
       .popout-btn {
@@ -52,15 +234,33 @@
 
       /* === Typography === */
       .title {
-        font-size: 18px;
-        font-weight: 650;
+        font-size: 19px;
+        font-weight: 700;
         margin: 0 0 10px;
+        letter-spacing: 0.2px;
+        background: linear-gradient(95deg, #1e1b4b, #4338ca 55%, #0ea5e9);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
 
       .subtitle {
         font-size: 12.5px;
-        color: #6b7280;
+        color: var(--text-secondary);
         margin: 0 0 10px;
+      }
+
+      #frame-name {
+        font-size: 12px;
+        font-weight: 600;
+        color: #334155;
+        background: rgba(79, 70, 229, 0.08);
+        border: 1px solid rgba(79, 70, 229, 0.15);
+        border-radius: 999px;
+        padding: 6px 10px;
+        display: inline-flex;
+        max-width: 100%;
+        word-break: break-word;
       }
 
       /* === Properties List === */
@@ -76,15 +276,15 @@
         align-items: center;
         gap: 12px;
         padding: 10px 12px;
-        border: 1px solid #e5e7eb;
+        border: 1px solid #e2e8f0;
         border-radius: 12px;
-        background: #f9fafb;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        background: rgba(248, 250, 252, 0.9);
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
       }
 
       .property-key {
         min-width: 130px;
-        color: #6b7280;
+        color: var(--text-secondary);
         font-size: 13px;
       }
 
@@ -95,17 +295,21 @@
 
       .property-input {
         width: 100%;
-        padding: 6px 8px;
+        padding: 7px 9px;
         border-radius: 8px;
-        border: 1px solid #e5e7eb;
+        border: 1px solid #dbe3ef;
         background: #ffffff;
-        color: #1f2937;
+        color: var(--text-primary);
         font-size: 13px;
+        transition:
+          border-color 0.15s ease,
+          box-shadow 0.15s ease;
       }
 
       .property-input:focus {
         outline: none;
-        border-color: #2563eb;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
       }
 
       .property-subgrid {
@@ -136,30 +340,50 @@
 
       /* === button styling === */
       .button {
-        padding: 8px 12px;
+        padding: 8px 13px;
         border-radius: 10px;
-        border: 1px solid #e5e7eb;
-        background: #ffffff;
-        color: #1f2937;
+        border: 1px solid #dbe4ef;
+        background: linear-gradient(180deg, #ffffff, #f8fafc);
+        color: var(--text-primary);
         cursor: pointer;
         font-size: 13px;
+        font-weight: 550;
         transition:
           background 0.2s ease,
-          border-color 0.2s ease;
+          border-color 0.2s ease,
+          transform 0.15s ease,
+          box-shadow 0.2s ease;
       }
 
       .button:hover {
-        background: #f3f4f6;
+        background: linear-gradient(180deg, #ffffff, #eef2ff);
+        border-color: #c7d2fe;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(79, 70, 229, 0.14);
+      }
+
+      .button:active {
+        transform: translateY(0);
       }
 
       .button.active {
-        border-color: #2563eb;
-        color: #2563eb;
-        background: rgba(37, 99, 235, 0.1);
+        border-color: var(--accent);
+        color: #ffffff;
+        background: linear-gradient(
+          135deg,
+          var(--accent),
+          var(--accent-strong)
+        );
+        box-shadow: 0 8px 18px rgba(79, 70, 229, 0.28);
       }
 
       .button.muted {
-        color: #6b7280;
+        color: var(--text-secondary);
+      }
+
+      .button:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.22);
       }
 
       /* === Code Output Display === */
@@ -167,15 +391,16 @@
         margin: 0;
         padding: 14px 16px;
         border-radius: 12px;
-        border: 1px solid #e5e7eb;
-        background: #f9fafb;
+        border: 1px solid #312e81;
+        background: linear-gradient(180deg, #111827, #0b1120);
         overflow: visible;
         white-space: pre-wrap;
         word-break: break-word;
         font-size: 13px;
         line-height: 20px;
         tab-size: 2;
-        color: #1f2937;
+        color: #e2e8f0;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
       }
 
       /* === buttons container (Copy, Download) === */
@@ -199,11 +424,11 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        border: 1px solid #e5e7eb;
+        border: 1px solid #e2e8f0;
         border-radius: 10px;
         padding: 8px 10px;
-        background: #f9fafb;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        background: rgba(248, 250, 252, 0.95);
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
       }
 
       .swatch-color {
@@ -241,11 +466,11 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        border: 1px solid #e5e7eb;
+        border: 1px solid #e2e8f0;
         border-radius: 10px;
         padding: 8px 10px;
-        background: #f9fafb;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        background: rgba(248, 250, 252, 0.95);
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
       }
 
       .child-fill-name {
@@ -264,26 +489,32 @@
 
       /* === Collapsible (W3Schools) === */
       .collapsible {
-        background-color: transparent;
-        color: #1f2937;
+        background-color: rgba(241, 245, 249, 0.72);
+        color: var(--text-primary);
         cursor: pointer;
         padding: 12px 14px;
         width: 100%;
-        border: none;
+        border: 1px solid #e2e8f0;
         text-align: left;
         outline: none;
         font-size: 14px;
         font-weight: 600;
-        transition: 0.4s;
+        transition: all 0.2s ease;
         display: flex;
         align-items: center;
         gap: 8px;
         border-radius: 10px;
+        position: sticky;
+        top: var(--sticky-header-offset);
+        z-index: 40;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
       }
 
-      .active,
+      .collapsible.active,
       .collapsible:hover {
-        background-color: #f3f4f6;
+        background-color: #eef2ff;
+        border-color: #c7d2fe;
       }
 
       .collapsible:after {
@@ -293,7 +524,7 @@
         margin-left: auto;
       }
 
-      .active:after {
+      .collapsible.active:after {
         content: "\2212";
       }
 
@@ -306,19 +537,22 @@
       }
 
       .content.open {
-        padding: 8px 14px 12px;
+        margin-top: 8px;
+        padding: 12px 14px 12px;
+        border-top: 1px solid rgba(199, 210, 254, 0.8);
       }
 
       /* === Token Tabs and Tree === */
       .token-tabs {
         display: flex;
         gap: 8px;
+        flex-wrap: wrap;
         margin-bottom: 12px;
-        border-bottom: 1px solid #e5e7eb;
-        overflow-x: auto;
-        overflow-y: hidden;
-        scrollbar-width: thin;
-        scrollbar-color: #d1d5db #f3f4f6;
+        padding: 8px;
+        border: 1px solid #dbe3ef;
+        border-radius: 12px;
+        background: rgba(241, 245, 249, 0.75);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
       }
 
       .token-tabs::-webkit-scrollbar {
@@ -339,22 +573,34 @@
       }
 
       .token-tab {
-        padding: 8px 12px;
-        border: none;
-        background: transparent;
+        padding: 7px 11px;
+        border: 1px solid #dbe4ef;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #ffffff, #f8fafc);
         cursor: pointer;
-        font-size: 13px;
-        color: #6b7280;
-        border-bottom: 2px solid transparent;
+        font-size: 12px;
+        font-weight: 600;
+        color: #334155;
         transition: all 0.2s ease;
         white-space: nowrap;
-        flex-shrink: 0;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
       }
 
       .token-tab.active {
-        color: #1f2937;
-        border-bottom-color: #3b82f6;
+        color: #ffffff;
+        border-color: var(--accent);
+        background: linear-gradient(
+          135deg,
+          var(--accent),
+          var(--accent-strong)
+        );
+        box-shadow: 0 8px 18px rgba(79, 70, 229, 0.28);
         font-weight: 600;
+      }
+
+      .token-tab:hover {
+        border-color: #c7d2fe;
+        transform: translateY(-1px);
       }
 
       .token-tree {
@@ -365,23 +611,131 @@
         overflow-y: auto;
       }
 
+      .layout-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px;
+        border: 1px solid #dbe3ef;
+        border-radius: 12px;
+        background: rgba(241, 245, 249, 0.75);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      }
+
+      .layout-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .layout-section-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: #334155;
+        letter-spacing: 0.02em;
+      }
+
+      .layout-note {
+        font-size: 11px;
+        color: #64748b;
+        margin-top: -2px;
+      }
+
+      .layout-grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .layout-grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
       .token-search {
-        margin-bottom: 10px;
+        margin-bottom: 12px;
+        position: relative;
+        background: rgba(224, 231, 255, 0.55);
+        border: 1px solid #c7d2fe;
+        border-radius: 10px;
+        padding: 8px;
+      }
+
+      .token-search-label {
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+        color: #3730a3;
+        margin-bottom: 6px;
+      }
+
+      .token-search::before {
+        content: "🔎";
+        position: absolute;
+        left: 16px;
+        top: 33px;
+        font-size: 12px;
+        opacity: 0.75;
       }
 
       .token-search input {
         width: 100%;
-        padding: 6px 8px;
+        padding: 8px 10px 8px 30px;
         border-radius: 6px;
-        border: 1px solid #d1d5db;
+        border: 1px solid #a5b4fc;
         background: #ffffff;
         color: #1f2937;
-        font-size: 12px;
+        font-size: 12.5px;
+        font-weight: 500;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+      }
+
+      .token-search input::placeholder {
+        color: #6366f1;
       }
 
       .token-search input:focus {
         outline: none;
-        border-color: #9ca3af;
+        border-color: #4f46e5;
+        box-shadow:
+          0 0 0 3px rgba(79, 70, 229, 0.18),
+          0 4px 12px rgba(79, 70, 229, 0.15);
+      }
+
+      .color-alpha-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 12px;
+        padding: 8px;
+        border: 1px solid #dbe4ef;
+        border-radius: 10px;
+        background: rgba(248, 250, 252, 0.8);
+      }
+
+      .alpha-filter-btn {
+        min-width: 30px;
+        padding: 5px 8px;
+        border-radius: 999px;
+        border: 1px solid #d1d5db;
+        background: #ffffff;
+        color: #334155;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .alpha-filter-btn:hover {
+        border-color: #a5b4fc;
+      }
+
+      .alpha-filter-btn.active {
+        border-color: #4f46e5;
+        background: linear-gradient(135deg, #4f46e5, #4338ca);
+        color: #ffffff;
       }
 
       .custom-token-controls {
@@ -596,15 +950,21 @@
     </style>
   </head>
   <body>
-    <div class="panel">
+    <div class="panel panel-hero">
       <div class="panel-header">
         <div class="panel-title-group">
           <p class="title">Simple HTML Codegen</p>
           <p class="subtitle">Selected Frame</p>
         </div>
-        <button class="button popout-btn" id="popout-btn">Pop out</button>
       </div>
       <div id="frame-name">No selection</div>
+    </div>
+
+    <div class="floating-toolbar">
+      <div class="panel-header-actions">
+        <button class="button muted popout-btn" id="undo-btn">Undo</button>
+        <button class="button popout-btn" id="popout-btn">Pop out</button>
+      </div>
     </div>
 
     <div class="panel">
@@ -617,23 +977,30 @@
     </div>
 
     <div class="panel">
-      <button type="button" class="collapsible">Color Swatches</button>
-      <div class="content">
-        <div id="color-swatches" class="swatches" aria-live="polite"></div>
-      </div>
-    </div>
-
-    <div class="panel">
       <button type="button" class="collapsible">Tailwind Color Tokens</button>
       <div class="content">
         <div class="token-tabs" id="token-tabs"></div>
+        <div
+          class="layout-controls"
+          id="layout-controls"
+          style="display: none"
+        ></div>
         <div class="token-search">
+          <label class="token-search-label" for="token-search-input"
+            >Find a token</label
+          >
           <input
             id="token-search-input"
             type="text"
             placeholder="Search tokens..."
           />
         </div>
+        <div
+          class="color-alpha-filters"
+          id="color-alpha-filters"
+          style="display: none"
+          aria-label="Filter colors by first letter"
+        ></div>
         <div
           class="spacing-property-selector"
           id="spacing-property-selector"
@@ -817,6 +1184,14 @@
       </div>
     </div>
 
+    <button
+      id="ui-resize-handle"
+      class="ui-resize-handle"
+      type="button"
+      aria-label="Resize panel"
+      title="Drag to resize panel"
+    ></button>
+
     <script>
       /* === DOM Elements === */
       const frameName = document.getElementById("frame-name");
@@ -824,15 +1199,27 @@
       const colorSwatches = document.getElementById("color-swatches");
       const childFills = document.getElementById("child-fills");
       const tokenTabs = document.getElementById("token-tabs");
+      const layoutControls = document.getElementById("layout-controls");
       const tokenSearchInput = document.getElementById("token-search-input");
+      const colorAlphaFilters = document.getElementById("color-alpha-filters");
       const tokenTree = document.getElementById("token-tree");
       const codeOutput = document.getElementById("code-output");
       const tabHtml = document.getElementById("tab-html");
       const tabTailwind = document.getElementById("tab-tailwind");
       const tabReactTailwind = document.getElementById("tab-react-tailwind");
+      const undoButton = document.getElementById("undo-btn");
       const copyButton = document.getElementById("copy-btn");
       const downloadButton = document.getElementById("download-btn");
       const popoutButton = document.getElementById("popout-btn");
+      const resizeHandle = document.getElementById("ui-resize-handle");
+
+      const BASE_UI_SIZE = { width: 380, height: 920 };
+      const RESIZE_LIMITS = {
+        minWidth: 320,
+        minHeight: 640,
+        maxWidth: 1280,
+        maxHeight: 1600,
+      };
 
       /* === App State === */
       /* Tracks current mode (html/tailwind/react-tailwind) and generated code */
@@ -845,10 +1232,96 @@
 
       let isPoppedOut = false;
       let currentNodeId = null;
+      let currentSelectionIds = [];
       let tokenSearchQuery = "";
       let customColors = {};
       let customGradients = {};
       let availableFontFamilies = [];
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function applyUiScale(
+        width = window.innerWidth,
+        height = window.innerHeight,
+      ) {
+        const widthRatio = width / BASE_UI_SIZE.width;
+        const heightRatio = height / BASE_UI_SIZE.height;
+        const scale = clamp(Math.min(widthRatio, heightRatio), 0.9, 1.25);
+        document.documentElement.style.setProperty("--ui-zoom", String(scale));
+      }
+
+      function setupManualResize() {
+        if (!resizeHandle) return;
+
+        let dragging = false;
+        let startX = 0;
+        let startY = 0;
+        let startWidth = 0;
+        let startHeight = 0;
+        let rafId = null;
+        let nextSize = null;
+
+        const flushResize = () => {
+          rafId = null;
+          if (!nextSize) return;
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "resize-ui",
+                width: nextSize.width,
+                height: nextSize.height,
+              },
+            },
+            "*",
+          );
+        };
+
+        const onPointerMove = (event) => {
+          if (!dragging) return;
+
+          const deltaX = event.clientX - startX;
+          const deltaY = event.clientY - startY;
+          const width = clamp(
+            startWidth + deltaX,
+            RESIZE_LIMITS.minWidth,
+            RESIZE_LIMITS.maxWidth,
+          );
+          const height = clamp(
+            startHeight + deltaY,
+            RESIZE_LIMITS.minHeight,
+            RESIZE_LIMITS.maxHeight,
+          );
+
+          nextSize = { width, height };
+          applyUiScale(width, height);
+
+          if (rafId === null) {
+            rafId = requestAnimationFrame(flushResize);
+          }
+        };
+
+        const endDrag = () => {
+          if (!dragging) return;
+          dragging = false;
+          document.body.classList.remove("is-resizing");
+          window.removeEventListener("pointermove", onPointerMove);
+          window.removeEventListener("pointerup", endDrag);
+        };
+
+        resizeHandle.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          dragging = true;
+          startX = event.clientX;
+          startY = event.clientY;
+          startWidth = window.innerWidth;
+          startHeight = window.innerHeight;
+          document.body.classList.add("is-resizing");
+          window.addEventListener("pointermove", onPointerMove);
+          window.addEventListener("pointerup", endDrag);
+        });
+      }
 
       const editableConfig = {
         x: { type: "number" },
@@ -1236,6 +1709,14 @@
         spacing: {
           0: "0px",
           px: "1px",
+          xs: "4px",
+          sm: "8px",
+          md: "16px",
+          lg: "24px",
+          xl: "32px",
+          "2xl": "40px",
+          "3xl": "48px",
+          "4xl": "64px",
           0.5: "2px",
           1: "4px",
           1.5: "6px",
@@ -1604,12 +2085,66 @@
       }
 
       let currentTokenCategory = "colors";
+      let currentColorLetterFilter = "ALL";
       const collapsedTokenGroups = {};
+
+      function getLeadingAlpha(value) {
+        const text = String(value || "")
+          .trim()
+          .toUpperCase();
+        const firstChar = text.charAt(0);
+        return /^[A-Z]$/.test(firstChar) ? firstChar : "#";
+      }
+
+      function renderColorAlphaFilters(tokenEntries) {
+        if (!colorAlphaFilters) return;
+
+        const letters = Array.from(
+          new Set(
+            tokenEntries.map(([tokenName]) => getLeadingAlpha(tokenName)),
+          ),
+        )
+          .filter((letter) => letter !== "#")
+          .sort();
+
+        if (letters.length <= 1) {
+          colorAlphaFilters.style.display = "none";
+          currentColorLetterFilter = "ALL";
+          colorAlphaFilters.innerHTML = "";
+          return;
+        }
+
+        if (
+          currentColorLetterFilter !== "ALL" &&
+          !letters.includes(currentColorLetterFilter)
+        ) {
+          currentColorLetterFilter = "ALL";
+        }
+
+        colorAlphaFilters.style.display = "flex";
+        colorAlphaFilters.innerHTML = "";
+
+        const addButton = (value, label) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = `alpha-filter-btn ${currentColorLetterFilter === value ? "active" : ""}`;
+          btn.textContent = label;
+          btn.addEventListener("click", () => {
+            currentColorLetterFilter = value;
+            renderTokenTree();
+          });
+          colorAlphaFilters.appendChild(btn);
+        };
+
+        addButton("ALL", "All");
+        letters.forEach((letter) => addButton(letter, letter));
+      }
 
       /* Render token tabs for each category */
       function renderTokenTabs() {
         tokenTabs.innerHTML = "";
-        Object.keys(TAILWIND_TOKENS).forEach((category) => {
+        const categories = [...Object.keys(TAILWIND_TOKENS), "layout"];
+        categories.forEach((category) => {
           const btn = document.createElement("button");
           btn.className = `token-tab ${category === currentTokenCategory ? "active" : ""}`;
           btn.textContent =
@@ -1621,6 +2156,122 @@
           });
           tokenTabs.appendChild(btn);
         });
+      }
+
+      function postLayoutAction(action, extra = {}) {
+        if (!currentSelectionIds.length && !currentNodeId) {
+          console.log("No node selected");
+          return;
+        }
+
+        parent.postMessage(
+          {
+            pluginMessage: {
+              type: "apply-layout-action",
+              nodeIds:
+                currentSelectionIds.length > 0
+                  ? currentSelectionIds
+                  : [currentNodeId],
+              action,
+              ...extra,
+            },
+          },
+          "*",
+        );
+      }
+
+      function renderLayoutControls() {
+        if (!layoutControls) return;
+
+        layoutControls.innerHTML = `
+          <div class="layout-section">
+            <div class="layout-section-title">Auto Layout</div>
+            <button type="button" class="button" id="layout-apply-auto-btn">Apply Auto Layout</button>
+            <div class="layout-note">Defaults to flex flex-col justify-start items-start flex-nowrap.</div>
+          </div>
+          <div class="layout-section">
+            <div class="layout-section-title">Flow Direction</div>
+            <div class="layout-grid-2">
+              <button type="button" class="button" data-layout-action="flow-direction" data-direction="HORIZONTAL">Row</button>
+              <button type="button" class="button" data-layout-action="flow-direction" data-direction="VERTICAL">Column</button>
+            </div>
+          </div>
+          <div class="layout-section">
+            <div class="layout-section-title">Alignment</div>
+            <div class="layout-grid-3">
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="TOP_LEFT">Top Left</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="TOP_CENTER">Top Center</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="TOP_RIGHT">Top Right</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="CENTER_LEFT">Left</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="CENTER_CENTER">Center</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="CENTER_RIGHT">Right</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="BOTTOM_LEFT">Bottom Left</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="BOTTOM_CENTER">Bottom Center</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="BOTTOM_RIGHT">Bottom Right</button>
+            </div>
+          </div>
+          <div class="layout-section">
+            <div class="layout-section-title">Justify Between</div>
+            <div class="layout-grid-3">
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="BETWEEN_LEFT">Left</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="BETWEEN_CENTER">Center</button>
+              <button type="button" class="button" data-layout-action="alignment" data-alignment="BETWEEN_RIGHT">Right</button>
+            </div>
+          </div>
+          <div class="layout-section">
+            <div class="layout-section-title">Width</div>
+            <div class="layout-grid-2">
+              <button type="button" class="button" data-layout-action="sizing" data-axis="WIDTH" data-sizing="FILL">Fill</button>
+              <button type="button" class="button" data-layout-action="sizing" data-axis="WIDTH" data-sizing="HUG">Hug</button>
+            </div>
+          </div>
+          <div class="layout-section">
+            <div class="layout-section-title">Height</div>
+            <div class="layout-grid-2">
+              <button type="button" class="button" data-layout-action="sizing" data-axis="HEIGHT" data-sizing="FILL">Fill</button>
+              <button type="button" class="button" data-layout-action="sizing" data-axis="HEIGHT" data-sizing="HUG">Hug</button>
+            </div>
+          </div>
+        `;
+
+        const applyAutoBtn = document.getElementById("layout-apply-auto-btn");
+        if (applyAutoBtn) {
+          applyAutoBtn.onclick = () => {
+            postLayoutAction("auto-layout");
+          };
+        }
+
+        layoutControls
+          .querySelectorAll("button[data-layout-action]")
+          .forEach((button) => {
+            button.onclick = () => {
+              const action = button.getAttribute("data-layout-action");
+              if (!action) return;
+
+              if (action === "flow-direction") {
+                postLayoutAction("flow-direction", {
+                  direction:
+                    button.getAttribute("data-direction") || "VERTICAL",
+                });
+                return;
+              }
+
+              if (action === "alignment") {
+                postLayoutAction("alignment", {
+                  alignment:
+                    button.getAttribute("data-alignment") || "TOP_LEFT",
+                });
+                return;
+              }
+
+              if (action === "sizing") {
+                postLayoutAction("sizing", {
+                  axis: button.getAttribute("data-axis") || "WIDTH",
+                  sizing: button.getAttribute("data-sizing") || "HUG",
+                });
+              }
+            };
+          });
       }
 
       /* Render token tree with nested colors/shades */
@@ -1649,6 +2300,17 @@
         if (gradientSelector) {
           gradientSelector.style.display =
             currentTokenCategory === "gradients" ? "block" : "none";
+        }
+
+        if (layoutControls) {
+          layoutControls.style.display =
+            currentTokenCategory === "layout" ? "flex" : "none";
+        }
+
+        if (currentTokenCategory === "layout") {
+          if (tokenTree) tokenTree.style.display = "none";
+          renderLayoutControls();
+          return;
         }
 
         if (tokenTree) {
@@ -1925,6 +2587,14 @@
         const isEffectsCategory = currentTokenCategory === "effects";
         const isGradientCategory = currentTokenCategory === "gradients";
 
+        if (colorAlphaFilters) {
+          colorAlphaFilters.style.display = isColorCategory ? "flex" : "none";
+          if (!isColorCategory) {
+            currentColorLetterFilter = "ALL";
+            colorAlphaFilters.innerHTML = "";
+          }
+        }
+
         if (isTokenLeaf(categoryTokens) || typeof categoryTokens !== "object") {
           const singleRow = document.createElement("div");
           singleRow.className = "token-shade";
@@ -1944,7 +2614,28 @@
 
         const flatTokens = [];
 
-        Object.entries(categoryTokens).forEach(([tokenName, tokenEntry]) => {
+        const tokenEntries = Object.entries(categoryTokens);
+        if (isColorCategory) {
+          tokenEntries.sort(([a], [b]) => a.localeCompare(b));
+          renderColorAlphaFilters(tokenEntries);
+        }
+        if (isTypographyCategory) {
+          tokenEntries.sort(([a], [b]) => {
+            if (a === "fontFamily" && b !== "fontFamily") return 1;
+            if (b === "fontFamily" && a !== "fontFamily") return -1;
+            return a.localeCompare(b);
+          });
+        }
+
+        tokenEntries.forEach(([tokenName, tokenEntry]) => {
+          if (
+            isColorCategory &&
+            currentColorLetterFilter !== "ALL" &&
+            getLeadingAlpha(tokenName) !== currentColorLetterFilter
+          ) {
+            return;
+          }
+
           if (
             tokenEntry &&
             typeof tokenEntry === "object" &&
@@ -2504,6 +3195,7 @@
       }
 
       function renderSwatches(data) {
+        if (!colorSwatches) return;
         colorSwatches.innerHTML = "";
         if (!data) return;
 
@@ -2721,11 +3413,36 @@
         URL.revokeObjectURL(url);
       }
 
+      function undoLastChange() {
+        parent.postMessage(
+          {
+            pluginMessage: {
+              type: "undo-last-change",
+            },
+          },
+          "*",
+        );
+
+        if (undoButton) {
+          undoButton.textContent = "Undid";
+          setTimeout(() => {
+            undoButton.textContent = "Undo";
+          }, 900);
+        }
+      }
+
       function updateSelection(message) {
         currentNodeId = message.data?.id || null;
-        frameName.textContent = message.data?.name || "Unnamed frame";
+        currentSelectionIds = Array.isArray(message.selectionIds)
+          ? message.selectionIds.filter(Boolean)
+          : currentNodeId
+            ? [currentNodeId]
+            : [];
+        frameName.textContent =
+          currentSelectionIds.length > 1
+            ? `${currentSelectionIds.length} selected layers`
+            : message.data?.name || "Unnamed frame";
         renderProperties(message.data);
-        renderSwatches(message.data);
         renderChildFills(message.data);
         renderTokenTabs();
         renderTokenTree();
@@ -2738,9 +3455,9 @@
 
       function clearSelection() {
         currentNodeId = null;
+        currentSelectionIds = [];
         frameName.textContent = "No selection";
         properties.innerHTML = "";
-        colorSwatches.innerHTML = "";
         childFills.innerHTML = "";
         appState.html = "";
         appState.tailwind = "";
@@ -2755,6 +3472,7 @@
       tabReactTailwind.addEventListener("click", () =>
         setMode("react-tailwind"),
       );
+      undoButton?.addEventListener("click", undoLastChange);
       copyButton.addEventListener("click", copyCode);
       downloadButton.addEventListener("click", downloadCode);
       popoutButton.addEventListener("click", () => {
@@ -2783,6 +3501,10 @@
           }
         });
       }
+
+      setupManualResize();
+      applyUiScale();
+      window.addEventListener("resize", () => applyUiScale());
 
       /* === Message Handling === */
       /* Receives updates from plugin code when selection changes */
