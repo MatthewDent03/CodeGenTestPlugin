@@ -54,7 +54,11 @@ If both commands return versions, continue with `npm install`.
 ```powershell
 git clone https://github.com/MatthewDent03/CodeGenTestPlugin.git
 cd CodeGenTestPlugin
+git checkout my-code
+git pull origin my-code
 ```
+
+This project is tested from the `my-code` branch. Make sure you're on that branch before installing dependencies and building.
 
 ### Option 2: Extract from Local Directory
 
