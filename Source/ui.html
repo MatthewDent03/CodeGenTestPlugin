@@ -87,6 +87,60 @@
         opacity: 0.7;
       }
 
+      .plugin-shell {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .sidebar-nav {
+        position: sticky;
+        top: 8px;
+        z-index: 170;
+        width: 42px;
+        flex: 0 0 42px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px 6px;
+        border: 1px solid #dbe4ff;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.85);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+        backdrop-filter: blur(8px);
+      }
+
+      .sidebar-nav-btn {
+        width: 100%;
+        height: 30px;
+        border: 1px solid #c7d2fe;
+        border-radius: 8px;
+        background: linear-gradient(180deg, #ffffff, #eef2ff);
+        color: #3730a3;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .sidebar-nav-btn:hover {
+        border-color: #818cf8;
+        transform: translateY(-1px);
+      }
+
+      .sidebar-nav-btn.active {
+        color: #ffffff;
+        border-color: #4f46e5;
+        background: linear-gradient(135deg, #4f46e5, #4338ca);
+        box-shadow: 0 6px 14px rgba(79, 70, 229, 0.28);
+      }
+
+      .plugin-main {
+        min-width: 0;
+        flex: 1;
+      }
+
       /* === Panel Layout === */
       .panel {
         background: var(--panel-bg);
@@ -128,7 +182,7 @@
       }
 
       .panel.panel-hero {
-        padding: 10px 12px 46px;
+        padding: 10px 12px 30px;
         margin-bottom: 10px;
         border-color: #c7d2fe;
         background:
@@ -172,16 +226,6 @@
         display: none;
       }
 
-      .panel.panel-hero #frame-name {
-        font-size: 11px;
-        padding: 3px 8px;
-        margin-top: 0;
-        max-width: 240px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
       .panel-header {
         display: flex;
         align-items: flex-start;
@@ -203,23 +247,41 @@
 
       .floating-toolbar {
         position: sticky;
-        top: 8px;
+        top: 10px;
         z-index: 160;
         display: flex;
         justify-content: flex-end;
-        margin-top: -60px;
+        margin-top: -44px;
         margin-bottom: 12px;
         padding-right: 10px;
         pointer-events: none;
       }
 
-      .floating-toolbar .panel-header-actions {
-        padding: 6px;
-        border-radius: 14px;
+      .floating-toolbar .sticky-frame-chip {
+        max-width: 210px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 10px;
         border: 1px solid #c7d2fe;
-        background: rgba(255, 255, 255, 0.9);
-        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
-        backdrop-filter: blur(8px);
+        background: #ffffff;
+        color: #111827;
+        font-weight: 700;
+        box-shadow: 0 6px 14px rgba(79, 70, 229, 0.12);
+        opacity: 1;
+        backdrop-filter: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        pointer-events: auto;
+      }
+
+      .floating-toolbar .panel-header-actions {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        backdrop-filter: none;
         pointer-events: auto;
       }
 
@@ -338,6 +400,19 @@
         flex-wrap: wrap;
       }
 
+      .code-preview-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+      }
+
+      .code-preview-topbar .tabs {
+        margin-bottom: 0;
+      }
+
       /* === button styling === */
       .button {
         padding: 8px 13px;
@@ -409,6 +484,11 @@
         justify-content: flex-end;
         gap: 12px;
         margin-top: 12px;
+      }
+
+      .code-preview-actions {
+        margin-top: 0;
+        margin-left: auto;
       }
 
       /* === Color Swatches === */
@@ -662,6 +742,12 @@
         padding: 8px;
       }
 
+      .token-search-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
       .token-search-label {
         display: block;
         font-size: 11px;
@@ -681,6 +767,7 @@
       }
 
       .token-search input {
+        flex: 1;
         width: 100%;
         padding: 8px 10px 8px 30px;
         border-radius: 6px;
@@ -702,6 +789,27 @@
         box-shadow:
           0 0 0 3px rgba(79, 70, 229, 0.18),
           0 4px 12px rgba(79, 70, 229, 0.15);
+      }
+
+      .token-search-clear {
+        flex-shrink: 0;
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid #a5b4fc;
+        background: #eef2ff;
+        color: #3730a3;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .token-search-clear:hover {
+        background: #e0e7ff;
+      }
+
+      .token-search-clear:disabled {
+        opacity: 0.5;
+        cursor: default;
       }
 
       .color-alpha-filters {
@@ -860,6 +968,107 @@
         border-color: #0284c7;
       }
 
+      .spacing-utility-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .spacing-utility-row .property-input {
+        min-width: 0;
+      }
+
+      .spacing-utility-row .button {
+        flex-shrink: 0;
+      }
+
+      .spacing-multi-targets {
+        display: grid;
+        gap: 8px;
+      }
+
+      .spacing-multi-group {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px 10px;
+      }
+
+      .spacing-multi-option {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #0f172a;
+      }
+
+      .spacing-multi-option input {
+        margin: 0;
+      }
+
+      .apply-toast {
+        position: fixed;
+        right: 18px;
+        bottom: 34px;
+        z-index: 260;
+        padding: 8px 12px;
+        border-radius: 10px;
+        border: 1px solid #22c55e;
+        background: rgba(22, 163, 74, 0.95);
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 700;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.24);
+        opacity: 0;
+        transform: translateY(8px);
+        pointer-events: none;
+        transition:
+          opacity 0.18s ease,
+          transform 0.18s ease;
+      }
+
+      .apply-toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .apply-toast.success {
+        border-color: #22c55e;
+        background: rgba(22, 163, 74, 0.95);
+      }
+
+      .apply-toast.error {
+        border-color: #ef4444;
+        background: rgba(220, 38, 38, 0.95);
+      }
+
+      .apply-toast.info {
+        border-color: #3b82f6;
+        background: rgba(37, 99, 235, 0.95);
+      }
+
+      .spacing-multi-targets {
+        display: grid;
+        gap: 8px;
+      }
+
+      .spacing-multi-group {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px 10px;
+      }
+
+      .spacing-multi-option {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #0f172a;
+      }
+
+      .spacing-multi-option input {
+        margin: 0;
+      }
+
       /* === Effects Property Selector === */
       .effects-property-selector {
         margin-bottom: 12px;
@@ -947,239 +1156,552 @@
       .gradient-stop-row button {
         flex-shrink: 0;
       }
+
+      .effects-property-selector.gradient-compact {
+        margin-bottom: 10px;
+        padding: 8px 10px;
+        max-height: none;
+        overflow-y: visible;
+      }
+
+      .effects-property-selector.gradient-compact label {
+        margin-bottom: 4px;
+        font-size: 11px;
+      }
+
+      .effects-property-selector.gradient-compact select {
+        margin-bottom: 4px;
+        padding: 5px 7px;
+        font-size: 11px;
+      }
+
+      .effects-property-selector.gradient-compact #gradient-add-stop-btn {
+        margin-top: 4px !important;
+      }
+
+      .effects-property-selector.gradient-compact #gradient-apply-btn {
+        margin-top: 6px !important;
+      }
+
+      .effects-property-selector.gradient-compact .custom-token-controls {
+        margin-top: 6px;
+        padding-top: 6px;
+        gap: 4px;
+      }
+
+      .effects-property-selector.gradient-compact .custom-token-row {
+        gap: 4px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .effects-property-selector.gradient-compact .custom-token-row input,
+      .effects-property-selector.gradient-compact .custom-token-row select {
+        padding: 5px 7px;
+        font-size: 11px;
+        flex: 1 1 130px;
+        min-width: 0;
+      }
+
+      .effects-property-selector.gradient-compact
+        .custom-token-row
+        input[type="color"] {
+        flex: 0 0 36px;
+      }
+
+      .effects-property-selector.gradient-compact .custom-token-row .button {
+        flex: 0 1 112px;
+        min-width: 0;
+        max-width: 100%;
+        padding: 5px 7px;
+        font-size: 11px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
     </style>
   </head>
   <body>
-    <div class="panel panel-hero">
-      <div class="panel-header">
-        <div class="panel-title-group">
-          <p class="title">Simple HTML Codegen</p>
-          <p class="subtitle">Selected Frame</p>
-        </div>
-      </div>
-      <div id="frame-name">No selection</div>
-    </div>
-
-    <div class="floating-toolbar">
-      <div class="panel-header-actions">
-        <button class="button muted popout-btn" id="undo-btn">Undo</button>
-        <button class="button popout-btn" id="popout-btn">Pop out</button>
-      </div>
-    </div>
-
-    <div class="panel">
-      <button type="button" class="collapsible">Editable Fields</button>
-      <div class="content">
-        <div id="properties" class="properties" aria-live="polite"></div>
-        <div class="subtitle" style="margin-top: 14px">Child Fills</div>
-        <div id="child-fills" class="child-fills" aria-live="polite"></div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <button type="button" class="collapsible">Tailwind Color Tokens</button>
-      <div class="content">
-        <div class="token-tabs" id="token-tabs"></div>
-        <div
-          class="layout-controls"
-          id="layout-controls"
-          style="display: none"
-        ></div>
-        <div class="token-search">
-          <label class="token-search-label" for="token-search-input"
-            >Find a token</label
-          >
-          <input
-            id="token-search-input"
-            type="text"
-            placeholder="Search tokens..."
-          />
-        </div>
-        <div
-          class="color-alpha-filters"
-          id="color-alpha-filters"
-          style="display: none"
-          aria-label="Filter colors by first letter"
-        ></div>
-        <div
-          class="spacing-property-selector"
-          id="spacing-property-selector"
-          style="display: none"
+    <div class="plugin-shell">
+      <nav
+        class="sidebar-nav"
+        id="main-sidebar-nav"
+        aria-label="Main section navigation"
+      >
+        <button
+          type="button"
+          class="sidebar-nav-btn"
+          data-section="manual-editing"
+          title="Manual Frame Editing"
+          aria-label="Manual Frame Editing"
         >
-          <label for="spacing-property-select">Apply spacing token to:</label>
-          <select id="spacing-property-select">
-            <option value="padding">Padding (All Sides)</option>
-            <option value="paddingTop">Padding Top</option>
-            <option value="paddingRight">Padding Right</option>
-            <option value="paddingBottom">Padding Bottom</option>
-            <option value="paddingLeft">Padding Left</option>
-            <option value="itemSpacing">Gap (Item Spacing)</option>
-            <option value="width">Width</option>
-            <option value="height">Height</option>
-            <option value="cornerRadius">Corner Radius (All Corners)</option>
-            <option value="topLeftRadius">Top Left Radius</option>
-            <option value="topRightRadius">Top Right Radius</option>
-            <option value="bottomRightRadius">Bottom Right Radius</option>
-            <option value="bottomLeftRadius">Bottom Left Radius</option>
-          </select>
-        </div>
-        <div
-          class="color-property-selector"
-          id="color-property-selector"
-          style="
-            display: none;
-            margin-bottom: 12px;
-            padding: 10px 12px;
-            background: #dbeafe;
-            border: 1px solid #60a5fa;
-            border-radius: 8px;
-          "
+          M
+        </button>
+        <button
+          type="button"
+          class="sidebar-nav-btn"
+          data-section="tailwind-tokens"
+          title="Tailwind Tokens"
+          aria-label="Tailwind Tokens"
         >
-          <label
-            for="color-property-select"
-            style="
-              display: block;
-              font-size: 12px;
-              font-weight: 600;
-              color: #1e3a8a;
-              margin-bottom: 6px;
-            "
-            >Apply color token to:</label
-          >
-          <select
-            id="color-property-select"
-            style="
-              width: 100%;
-              padding: 6px 8px;
-              border-radius: 6px;
-              border: 1px solid #60a5fa;
-              background: #ffffff;
-              color: #1f2937;
-              font-size: 12px;
-              cursor: pointer;
-            "
-          >
-            <option value="fill">Fill</option>
-            <option value="stroke">Stroke</option>
-          </select>
-        </div>
-        <div
-          class="effects-property-selector"
-          id="effects-property-selector"
-          style="display: none"
+          T
+        </button>
+        <button
+          type="button"
+          class="sidebar-nav-btn"
+          data-section="code-preview"
+          title="Code Generation Preview"
+          aria-label="Code Generation Preview"
         >
-          <label for="stroke-position-select">Stroke Position:</label>
-          <select id="stroke-position-select">
-            <option value="CENTER">Center</option>
-            <option value="INSIDE">Inside</option>
-            <option value="OUTSIDE">Outside</option>
-          </select>
+          C
+        </button>
+      </nav>
 
-          <label for="blur-type-select">Blur Type:</label>
-          <select id="blur-type-select">
-            <option value="LAYER_BLUR">Layer Blur</option>
-            <option value="BACKGROUND_BLUR">Background Blur</option>
-          </select>
-        </div>
-        <div
-          class="effects-property-selector"
-          id="gradient-selector"
-          style="display: none"
-        >
-          <label for="gradient-from-select">Gradient From:</label>
-          <select id="gradient-from-select">
-            <option value="">-- Select Color --</option>
-          </select>
-
-          <label
-            for="gradient-to-select"
-            style="margin-top: 6px; display: block"
-            >Gradient To:</label
-          >
-          <select id="gradient-to-select">
-            <option value="">-- Select Color --</option>
-          </select>
-
-          <div id="gradient-extra-stops"></div>
-
-          <button
-            type="button"
-            id="gradient-add-stop-btn"
-            class="button muted"
-            style="margin-top: 6px; width: 100%"
-          >
-            + Add Another Color Stop
-          </button>
-
-          <button
-            type="button"
-            id="gradient-apply-btn"
-            class="button"
-            style="margin-top: 8px; width: 100%"
-          >
-            Apply Gradient
-          </button>
-
-          <div class="custom-token-controls">
-            <div class="custom-token-row">
-              <input
-                id="custom-color-name"
-                type="text"
-                placeholder="Custom color name"
-              />
-              <input id="custom-color-value" type="color" value="#3b82f6" />
-              <button type="button" id="save-custom-color-btn" class="button">
-                Save Color
-              </button>
-            </div>
-
-            <div class="custom-token-row">
-              <input
-                id="custom-gradient-name"
-                type="text"
-                placeholder="Custom gradient name"
-              />
-              <button
-                type="button"
-                id="save-custom-gradient-btn"
-                class="button"
-              >
-                Save Gradient
-              </button>
-            </div>
-
-            <div class="custom-token-row">
-              <select id="saved-gradient-select">
-                <option value="">-- Saved Gradients --</option>
-              </select>
-              <button
-                type="button"
-                id="apply-saved-gradient-btn"
-                class="button"
-              >
-                Apply Saved
-              </button>
+      <div class="plugin-main">
+        <div class="panel panel-hero">
+          <div class="panel-header">
+            <div class="panel-title-group">
+              <p class="title">Simple HTML Codegen</p>
+              <p class="subtitle">Selected Frame</p>
             </div>
           </div>
         </div>
-        <div class="token-tree" id="token-tree"></div>
-      </div>
-    </div>
 
-    <div class="panel">
-      <button type="button" class="collapsible">Live Code Preview</button>
-      <div class="content">
-        <div class="tabs">
-          <button class="button active" id="tab-html">HTML + CSS</button>
-          <button class="button" id="tab-tailwind">HTML + Tailwind</button>
-          <button class="button" id="tab-react-tailwind">
-            React + Tailwind
-          </button>
+        <div class="floating-toolbar">
+          <div class="panel-header-actions">
+            <div id="frame-name" class="button popout-btn sticky-frame-chip">
+              No selection
+            </div>
+            <button class="button popout-btn" id="undo-btn">Undo</button>
+            <button class="button popout-btn" id="popout-btn">Pop out</button>
+          </div>
         </div>
-        <pre id="code-output" aria-live="polite"></pre>
-        <div class="actions">
-          <button class="button" id="copy-btn">Copy</button>
-          <button class="button muted" id="download-btn">Download</button>
+
+        <div class="panel">
+          <button
+            type="button"
+            class="collapsible"
+            data-section="manual-editing"
+          >
+            Manual Frame Editing
+          </button>
+          <div class="content">
+            <div id="properties" class="properties" aria-live="polite"></div>
+            <div class="subtitle" style="margin-top: 14px">Child Fills</div>
+            <div id="child-fills" class="child-fills" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <button
+            type="button"
+            class="collapsible"
+            data-section="tailwind-tokens"
+          >
+            Tailwind Tokens
+          </button>
+          <div class="content">
+            <div class="token-tabs" id="token-tabs"></div>
+            <div
+              class="layout-controls"
+              id="layout-controls"
+              style="display: none"
+            ></div>
+            <div class="token-search">
+              <label class="token-search-label" for="token-search-input"
+                >Find a token</label
+              >
+              <div class="token-search-row">
+                <input
+                  id="token-search-input"
+                  type="text"
+                  placeholder="Search tokens..."
+                />
+                <button
+                  type="button"
+                  id="token-search-clear-btn"
+                  class="token-search-clear"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+            <div
+              class="color-alpha-filters"
+              id="color-alpha-filters"
+              style="display: none"
+              aria-label="Filter colors by first letter"
+            ></div>
+            <div
+              class="spacing-property-selector"
+              id="color-utility-input-row"
+              style="display: none"
+            >
+              <label for="color-utility-input">Quick utility apply:</label>
+              <div class="spacing-utility-row">
+                <input
+                  id="color-utility-input"
+                  class="property-input"
+                  type="text"
+                  placeholder="e.g. stone-800, bg-stone-800, border-stone-800"
+                />
+                <button
+                  type="button"
+                  id="apply-color-utility-btn"
+                  class="button muted"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+            <div
+              class="spacing-property-selector"
+              id="spacing-property-selector"
+              style="display: none"
+            >
+              <label for="spacing-property-select"
+                >Apply spacing token to:</label
+              >
+              <select id="spacing-property-select">
+                <option value="padding">Padding (All Sides)</option>
+                <option value="paddingCustom">Padding (Custom Sides)</option>
+                <option value="paddingTop">Padding Top</option>
+                <option value="paddingRight">Padding Right</option>
+                <option value="paddingBottom">Padding Bottom</option>
+                <option value="paddingLeft">Padding Left</option>
+                <option value="itemSpacing">Gap (Item Spacing)</option>
+                <option value="width">Width</option>
+                <option value="height">Height</option>
+                <option value="cornerRadius">
+                  Corner Radius (All Corners)
+                </option>
+                <option value="cornerRadiusCustom">
+                  Corner Radius (Custom Corners)
+                </option>
+                <option value="topLeftRadius">Top Left Radius</option>
+                <option value="topRightRadius">Top Right Radius</option>
+                <option value="bottomRightRadius">Bottom Right Radius</option>
+                <option value="bottomLeftRadius">Bottom Left Radius</option>
+              </select>
+            </div>
+            <div
+              class="spacing-property-selector"
+              id="spacing-multi-targets-row"
+              style="display: none"
+            >
+              <label>Choose multiple targets:</label>
+              <div class="spacing-multi-targets">
+                <div
+                  class="spacing-multi-group"
+                  id="padding-multi-targets"
+                  style="display: none"
+                >
+                  <label class="spacing-multi-option"
+                    ><input
+                      type="checkbox"
+                      name="padding-multi-target"
+                      value="paddingTop"
+                    />
+                    Top</label
+                  >
+                  <label class="spacing-multi-option"
+                    ><input
+                      type="checkbox"
+                      name="padding-multi-target"
+                      value="paddingRight"
+                      checked
+                    />
+                    Right</label
+                  >
+                  <label class="spacing-multi-option"
+                    ><input
+                      type="checkbox"
+                      name="padding-multi-target"
+                      value="paddingBottom"
+                    />
+                    Bottom</label
+                  >
+                  <label class="spacing-multi-option"
+                    ><input
+                      type="checkbox"
+                      name="padding-multi-target"
+                      value="paddingLeft"
+                      checked
+                    />
+                    Left</label
+                  >
+                </div>
+
+                <div
+                  class="spacing-multi-group"
+                  id="corner-multi-targets"
+                  style="display: none"
+                >
+                  <label class="spacing-multi-option"
+                    ><input
+                      type="checkbox"
+                      name="corner-multi-target"
+                      value="topLeftRadius"
+                    />
+                    Top Left</label
+                  >
+                  <label class="spacing-multi-option"
+                    ><input
+                      type="checkbox"
+                      name="corner-multi-target"
+                      value="topRightRadius"
+                    />
+                    Top Right</label
+                  >
+                  <label class="spacing-multi-option"
+                    ><input
+                      type="checkbox"
+                      name="corner-multi-target"
+                      value="bottomLeftRadius"
+                    />
+                    Bottom Left</label
+                  >
+                  <label class="spacing-multi-option"
+                    ><input
+                      type="checkbox"
+                      name="corner-multi-target"
+                      value="bottomRightRadius"
+                    />
+                    Bottom Right</label
+                  >
+                </div>
+              </div>
+            </div>
+            <div
+              class="spacing-property-selector"
+              id="spacing-utility-input-row"
+              style="display: none"
+            >
+              <label for="spacing-utility-input">Quick utility apply:</label>
+              <div class="spacing-utility-row">
+                <input
+                  id="spacing-utility-input"
+                  class="property-input"
+                  type="text"
+                  placeholder="e.g. gap-2, p-4, pt-2, w-64, rounded-2"
+                />
+                <button
+                  type="button"
+                  id="apply-spacing-utility-btn"
+                  class="button muted"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+            <div
+              class="spacing-property-selector"
+              id="typography-property-selector"
+              style="display: none"
+            >
+              <label for="typography-property-select"
+                >Show text styling group:</label
+              >
+              <select id="typography-property-select">
+                <option value="fontSize" selected>Font Size</option>
+                <option value="fontWeight">Font Weight</option>
+                <option value="lineHeight">Line Height</option>
+                <option value="letterSpacing">Letter Spacing</option>
+                <option value="fontFamily">Font Family</option>
+                <option value="all">All Groups</option>
+              </select>
+            </div>
+            <div
+              class="spacing-property-selector"
+              id="typography-utility-input-row"
+              style="display: none"
+            >
+              <label for="typography-utility-input">Quick utility apply:</label>
+              <div class="spacing-utility-row">
+                <input
+                  id="typography-utility-input"
+                  class="property-input"
+                  type="text"
+                  placeholder="e.g. text-xl, font-semibold, leading-tight"
+                />
+                <button
+                  type="button"
+                  id="apply-typography-utility-btn"
+                  class="button muted"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+            <div
+              class="color-property-selector"
+              id="color-property-selector"
+              style="
+                display: none;
+                margin-bottom: 12px;
+                padding: 10px 12px;
+                background: #dbeafe;
+                border: 1px solid #60a5fa;
+                border-radius: 8px;
+              "
+            >
+              <label
+                for="color-property-select"
+                style="
+                  display: block;
+                  font-size: 12px;
+                  font-weight: 600;
+                  color: #1e3a8a;
+                  margin-bottom: 6px;
+                "
+                >Apply color token to:</label
+              >
+              <select
+                id="color-property-select"
+                style="
+                  width: 100%;
+                  padding: 6px 8px;
+                  border-radius: 6px;
+                  border: 1px solid #60a5fa;
+                  background: #ffffff;
+                  color: #1f2937;
+                  font-size: 12px;
+                  cursor: pointer;
+                "
+              >
+                <option value="fill">Fill</option>
+                <option value="stroke">Stroke</option>
+              </select>
+            </div>
+            <div
+              class="effects-property-selector"
+              id="effects-property-selector"
+              style="display: none"
+            >
+              <label for="stroke-position-select">Stroke Position:</label>
+              <select id="stroke-position-select">
+                <option value="CENTER">Center</option>
+                <option value="INSIDE">Inside</option>
+                <option value="OUTSIDE">Outside</option>
+              </select>
+
+              <label for="blur-type-select">Blur Type:</label>
+              <select id="blur-type-select">
+                <option value="LAYER_BLUR">Layer Blur</option>
+                <option value="BACKGROUND_BLUR">Background Blur</option>
+              </select>
+            </div>
+            <div
+              class="effects-property-selector"
+              id="gradient-selector"
+              style="display: none"
+            >
+              <label for="gradient-from-select">Gradient From:</label>
+              <select id="gradient-from-select">
+                <option value="">-- Select Color --</option>
+              </select>
+
+              <label
+                for="gradient-to-select"
+                style="margin-top: 6px; display: block"
+                >Gradient To:</label
+              >
+              <select id="gradient-to-select">
+                <option value="">-- Select Color --</option>
+              </select>
+
+              <div id="gradient-extra-stops"></div>
+
+              <button
+                type="button"
+                id="gradient-add-stop-btn"
+                class="button muted"
+                style="margin-top: 6px; width: 100%"
+              >
+                + Add Another Color Stop
+              </button>
+
+              <button
+                type="button"
+                id="gradient-apply-btn"
+                class="button"
+                style="margin-top: 8px; width: 100%"
+              >
+                Apply Gradient
+              </button>
+
+              <div class="custom-token-controls">
+                <div class="custom-token-row">
+                  <input
+                    id="custom-color-name"
+                    type="text"
+                    placeholder="Custom color name"
+                  />
+                  <input id="custom-color-value" type="color" value="#3b82f6" />
+                  <button
+                    type="button"
+                    id="save-custom-color-btn"
+                    class="button"
+                  >
+                    Save Color
+                  </button>
+                </div>
+
+                <div class="custom-token-row">
+                  <input
+                    id="custom-gradient-name"
+                    type="text"
+                    placeholder="Custom gradient name"
+                  />
+                  <button
+                    type="button"
+                    id="save-custom-gradient-btn"
+                    class="button"
+                  >
+                    Save Gradient
+                  </button>
+                </div>
+
+                <div class="custom-token-row">
+                  <select id="saved-gradient-select">
+                    <option value="">-- Saved Gradients --</option>
+                  </select>
+                  <button
+                    type="button"
+                    id="apply-saved-gradient-btn"
+                    class="button"
+                  >
+                    Apply Saved
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="token-tree" id="token-tree"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <button type="button" class="collapsible" data-section="code-preview">
+            Code Generation Preview
+          </button>
+          <div class="content">
+            <div class="code-preview-topbar">
+              <div class="tabs">
+                <button class="button active" id="tab-html">HTML + CSS</button>
+                <button class="button" id="tab-tailwind">
+                  HTML + Tailwind
+                </button>
+                <button class="button" id="tab-react-tailwind">
+                  React + Tailwind
+                </button>
+              </div>
+              <div class="actions code-preview-actions">
+                <button class="button" id="copy-btn">Copy</button>
+                <button class="button muted" id="download-btn">Download</button>
+              </div>
+            </div>
+            <pre id="code-output" aria-live="polite"></pre>
+          </div>
         </div>
       </div>
     </div>
@@ -1191,6 +1713,7 @@
       aria-label="Resize panel"
       title="Drag to resize panel"
     ></button>
+    <div id="apply-toast" class="apply-toast" aria-live="polite">Applied</div>
 
     <script>
       /* === DOM Elements === */
@@ -1201,6 +1724,9 @@
       const tokenTabs = document.getElementById("token-tabs");
       const layoutControls = document.getElementById("layout-controls");
       const tokenSearchInput = document.getElementById("token-search-input");
+      const tokenSearchClearBtn = document.getElementById(
+        "token-search-clear-btn",
+      );
       const colorAlphaFilters = document.getElementById("color-alpha-filters");
       const tokenTree = document.getElementById("token-tree");
       const codeOutput = document.getElementById("code-output");
@@ -1212,8 +1738,16 @@
       const downloadButton = document.getElementById("download-btn");
       const popoutButton = document.getElementById("popout-btn");
       const resizeHandle = document.getElementById("ui-resize-handle");
+      const mainSidebarNav = document.getElementById("main-sidebar-nav");
+      const applyToast = document.getElementById("apply-toast");
 
       const BASE_UI_SIZE = { width: 380, height: 920 };
+      const UI_SCALE_CONFIG = {
+        min: 0.9,
+        max: 1.5,
+        widthWeight: 0.62,
+        heightWeight: 0.38,
+      };
       const RESIZE_LIMITS = {
         minWidth: 320,
         minHeight: 640,
@@ -1237,6 +1771,45 @@
       let customColors = {};
       let customGradients = {};
       let availableFontFamilies = [];
+      let pendingApplyFeedback = false;
+      let pendingApplyFeedbackTimer = null;
+      let applyToastHideTimer = null;
+
+      function markPendingApplyFeedback() {
+        pendingApplyFeedback = true;
+        if (pendingApplyFeedbackTimer) {
+          clearTimeout(pendingApplyFeedbackTimer);
+        }
+        pendingApplyFeedbackTimer = setTimeout(() => {
+          pendingApplyFeedback = false;
+        }, 2200);
+      }
+
+      function showApplyToast(message = "Applied", level = "success") {
+        if (!applyToast) return;
+        applyToast.textContent = message;
+        applyToast.classList.remove("success", "error", "info");
+        applyToast.classList.add(
+          level === "error" ? "error" : level === "info" ? "info" : "success",
+        );
+        applyToast.classList.add("show");
+        if (applyToastHideTimer) {
+          clearTimeout(applyToastHideTimer);
+        }
+        applyToastHideTimer = setTimeout(() => {
+          applyToast.classList.remove("show");
+        }, 1250);
+      }
+
+      function consumePendingApplyFeedback() {
+        if (!pendingApplyFeedback) return;
+        pendingApplyFeedback = false;
+        if (pendingApplyFeedbackTimer) {
+          clearTimeout(pendingApplyFeedbackTimer);
+          pendingApplyFeedbackTimer = null;
+        }
+        showApplyToast("Applied", "success");
+      }
 
       function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
@@ -1248,7 +1821,14 @@
       ) {
         const widthRatio = width / BASE_UI_SIZE.width;
         const heightRatio = height / BASE_UI_SIZE.height;
-        const scale = clamp(Math.min(widthRatio, heightRatio), 0.9, 1.25);
+        const weightedRatio =
+          widthRatio * UI_SCALE_CONFIG.widthWeight +
+          heightRatio * UI_SCALE_CONFIG.heightWeight;
+        const scale = clamp(
+          weightedRatio,
+          UI_SCALE_CONFIG.min,
+          UI_SCALE_CONFIG.max,
+        );
         document.documentElement.style.setProperty("--ui-zoom", String(scale));
       }
 
@@ -2077,11 +2657,21 @@
       function matchesTokenSearch(...parts) {
         const query = tokenSearchQuery.trim().toLowerCase();
         if (!query) return true;
-        return parts.some((part) =>
+
+        const normalizedParts = parts.map((part) =>
           String(part ?? "")
-            .toLowerCase()
-            .includes(query),
+            .trim()
+            .toLowerCase(),
         );
+
+        const variants = [
+          ...normalizedParts,
+          normalizedParts.join("-"),
+          normalizedParts.join(" "),
+          normalizedParts.join(""),
+        ];
+
+        return variants.some((value) => value.includes(query));
       }
 
       let currentTokenCategory = "colors";
@@ -2144,18 +2734,44 @@
       function renderTokenTabs() {
         tokenTabs.innerHTML = "";
         const categories = [...Object.keys(TAILWIND_TOKENS), "layout"];
+        const categoryDisplayNames = {
+          colors: "Colours",
+          typography: "Text Styling",
+          layout: "Flexbox / Layout",
+        };
         categories.forEach((category) => {
           const btn = document.createElement("button");
           btn.className = `token-tab ${category === currentTokenCategory ? "active" : ""}`;
           btn.textContent =
+            categoryDisplayNames[category] ||
             category.charAt(0).toUpperCase() + category.slice(1);
           btn.addEventListener("click", () => {
             currentTokenCategory = category;
+            clearTokenSearch();
             renderTokenTabs();
             renderTokenTree();
+            requestAnimationFrame(refreshOpenCollapsibles);
           });
           tokenTabs.appendChild(btn);
         });
+      }
+
+      function updateTokenSearchUi() {
+        if (!tokenSearchInput) return;
+        tokenSearchInput.value = tokenSearchQuery;
+        if (tokenSearchClearBtn) {
+          tokenSearchClearBtn.disabled = tokenSearchQuery.trim().length === 0;
+        }
+      }
+
+      function clearTokenSearch() {
+        tokenSearchQuery = "";
+        if (tokenSearchInput) {
+          tokenSearchInput.value = "";
+        }
+        if (tokenSearchClearBtn) {
+          tokenSearchClearBtn.disabled = true;
+        }
       }
 
       function postLayoutAction(action, extra = {}) {
@@ -2163,6 +2779,8 @@
           console.log("No node selected");
           return;
         }
+
+        markPendingApplyFeedback();
 
         parent.postMessage(
           {
@@ -2278,13 +2896,62 @@
       function renderTokenTree() {
         tokenTree.innerHTML = "";
 
+        const tokenSearch = document.querySelector(".token-search");
+        const showTokenFilters =
+          currentTokenCategory !== "layout" &&
+          currentTokenCategory !== "gradients";
+
         // Show/hide spacing property selector based on category
         const spacingSelector = document.getElementById(
           "spacing-property-selector",
         );
+        const spacingMultiTargetsRow = document.getElementById(
+          "spacing-multi-targets-row",
+        );
+        const colorUtilityRow = document.getElementById(
+          "color-utility-input-row",
+        );
+        const spacingUtilityRow = document.getElementById(
+          "spacing-utility-input-row",
+        );
+        const typographySelector = document.getElementById(
+          "typography-property-selector",
+        );
+        const typographyUtilityRow = document.getElementById(
+          "typography-utility-input-row",
+        );
+        const typographyPropertySelect = document.getElementById(
+          "typography-property-select",
+        );
+
+        if (colorUtilityRow) {
+          colorUtilityRow.style.display =
+            currentTokenCategory === "colors" ? "block" : "none";
+        }
+
         if (spacingSelector) {
           spacingSelector.style.display =
             currentTokenCategory === "spacing" ? "block" : "none";
+        }
+
+        if (spacingMultiTargetsRow) {
+          spacingMultiTargetsRow.style.display =
+            currentTokenCategory === "spacing" ? "block" : "none";
+        }
+
+        if (spacingUtilityRow) {
+          spacingUtilityRow.style.display =
+            currentTokenCategory === "spacing" ? "block" : "none";
+        }
+
+        if (typographySelector) {
+          typographySelector.style.display =
+            currentTokenCategory === "typography" ? "block" : "none";
+        }
+
+        if (typographyUtilityRow) {
+          typographyUtilityRow.style.display =
+            currentTokenCategory === "typography" ? "block" : "none";
         }
 
         // Show/hide effects property selector based on category
@@ -2300,6 +2967,14 @@
         if (gradientSelector) {
           gradientSelector.style.display =
             currentTokenCategory === "gradients" ? "block" : "none";
+          gradientSelector.style.maxHeight =
+            currentTokenCategory === "gradients" ? "none" : "280px";
+          gradientSelector.style.overflowY =
+            currentTokenCategory === "gradients" ? "visible" : "auto";
+          gradientSelector.classList.toggle(
+            "gradient-compact",
+            currentTokenCategory === "gradients",
+          );
         }
 
         if (layoutControls) {
@@ -2307,9 +2982,72 @@
             currentTokenCategory === "layout" ? "flex" : "none";
         }
 
+        if (tokenSearch) {
+          tokenSearch.style.display = showTokenFilters ? "block" : "none";
+        }
+
+        if (colorAlphaFilters) {
+          colorAlphaFilters.style.display =
+            showTokenFilters && currentTokenCategory === "colors"
+              ? "flex"
+              : "none";
+        }
+
+        if (colorUtilityRow) {
+          colorUtilityRow.style.display =
+            showTokenFilters && currentTokenCategory === "colors"
+              ? "block"
+              : "none";
+        }
+
+        if (spacingSelector) {
+          spacingSelector.style.display =
+            showTokenFilters && currentTokenCategory === "spacing"
+              ? "block"
+              : "none";
+        }
+
+        if (spacingMultiTargetsRow) {
+          spacingMultiTargetsRow.style.display =
+            showTokenFilters && currentTokenCategory === "spacing"
+              ? "block"
+              : "none";
+        }
+
+        if (spacingUtilityRow) {
+          spacingUtilityRow.style.display =
+            showTokenFilters && currentTokenCategory === "spacing"
+              ? "block"
+              : "none";
+        }
+
+        if (typographySelector) {
+          typographySelector.style.display =
+            showTokenFilters && currentTokenCategory === "typography"
+              ? "block"
+              : "none";
+        }
+
+        if (typographyUtilityRow) {
+          typographyUtilityRow.style.display =
+            showTokenFilters && currentTokenCategory === "typography"
+              ? "block"
+              : "none";
+        }
+
+        if (effectsSelector) {
+          effectsSelector.style.display =
+            showTokenFilters && currentTokenCategory === "effects"
+              ? "block"
+              : "none";
+        }
+
+        updateSpacingMultiTargetUi();
+
         if (currentTokenCategory === "layout") {
           if (tokenTree) tokenTree.style.display = "none";
           renderLayoutControls();
+          requestAnimationFrame(refreshOpenCollapsibles);
           return;
         }
 
@@ -2628,6 +3366,17 @@
         }
 
         tokenEntries.forEach(([tokenName, tokenEntry]) => {
+          if (isTypographyCategory) {
+            const typographyGroupFilter =
+              typographyPropertySelect?.value || "fontSize";
+            if (
+              typographyGroupFilter !== "all" &&
+              tokenName !== typographyGroupFilter
+            ) {
+              return;
+            }
+          }
+
           if (
             isColorCategory &&
             currentColorLetterFilter !== "ALL" &&
@@ -2798,9 +3547,7 @@
             }
 
             const groupKey = `${currentTokenCategory}:${tokenName}`;
-            const isSearchActive = tokenSearchQuery.trim().length > 0;
-            const isCollapsed =
-              !isSearchActive && collapsedTokenGroups[groupKey] === true;
+            const isCollapsed = collapsedTokenGroups[groupKey] === true;
 
             colorNameEl.textContent = `${isCollapsed ? "▸" : "▾"} ${tokenName} (${visibleShadeCount})`;
             colorNameEl.addEventListener("click", () => {
@@ -2921,17 +3668,7 @@
 
                 if (!property) return;
 
-                parent.postMessage(
-                  {
-                    pluginMessage: {
-                      type: "apply-spacing-token",
-                      nodeId: currentNodeId,
-                      tokenName: token.name,
-                      property: property,
-                    },
-                  },
-                  "*",
-                );
+                applySpacingTokenWithProperty(token.name, property);
               });
             } else if (currentTokenCategory === "typography") {
               // For typography, token.name is the subcategory (fontSize, fontFamily, etc.)
@@ -2950,6 +3687,355 @@
           empty.textContent = "No matching tokens";
           tokenTree.appendChild(empty);
         }
+
+        requestAnimationFrame(refreshOpenCollapsibles);
+      }
+
+      function parseSpacingUtilityInput(rawValue) {
+        const value = String(rawValue || "")
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "");
+        if (!value) return null;
+
+        const spacingPropertySelect = document.getElementById(
+          "spacing-property-select",
+        );
+        const fallbackProperty = spacingPropertySelect
+          ? spacingPropertySelect.value
+          : "padding";
+
+        const utilityParsers = [
+          { regex: /^gap-(.+)$/, property: "itemSpacing" },
+          { regex: /^p-(.+)$/, property: "padding" },
+          { regex: /^pt-(.+)$/, property: "paddingTop" },
+          { regex: /^pr-(.+)$/, property: "paddingRight" },
+          { regex: /^pb-(.+)$/, property: "paddingBottom" },
+          { regex: /^pl-(.+)$/, property: "paddingLeft" },
+          { regex: /^w-(.+)$/, property: "width" },
+          { regex: /^h-(.+)$/, property: "height" },
+          { regex: /^rounded-tl-(.+)$/, property: "topLeftRadius" },
+          { regex: /^rounded-tr-(.+)$/, property: "topRightRadius" },
+          { regex: /^rounded-br-(.+)$/, property: "bottomRightRadius" },
+          { regex: /^rounded-bl-(.+)$/, property: "bottomLeftRadius" },
+          { regex: /^rounded-(.+)$/, property: "cornerRadius" },
+        ];
+
+        let property = fallbackProperty;
+        let tokenName = value;
+
+        for (const parser of utilityParsers) {
+          const match = value.match(parser.regex);
+          if (match) {
+            property = parser.property;
+            tokenName = match[1];
+            break;
+          }
+        }
+
+        const spacingTokens = TAILWIND_TOKENS.spacing || {};
+        if (!Object.prototype.hasOwnProperty.call(spacingTokens, tokenName)) {
+          return null;
+        }
+
+        return { property, tokenName };
+      }
+
+      function resolveSpacingTargetProperties(baseProperty) {
+        const property = String(baseProperty || "").trim();
+        if (property === "paddingCustom") {
+          return Array.from(
+            document.querySelectorAll(
+              'input[name="padding-multi-target"]:checked',
+            ),
+          ).map((input) => input.value);
+        }
+
+        if (property === "cornerRadiusCustom") {
+          return Array.from(
+            document.querySelectorAll(
+              'input[name="corner-multi-target"]:checked',
+            ),
+          ).map((input) => input.value);
+        }
+
+        return property ? [property] : [];
+      }
+
+      function updateSpacingMultiTargetUi() {
+        const spacingPropertySelect = document.getElementById(
+          "spacing-property-select",
+        );
+        const spacingMultiTargetsRow = document.getElementById(
+          "spacing-multi-targets-row",
+        );
+        const paddingMultiTargets = document.getElementById(
+          "padding-multi-targets",
+        );
+        const cornerMultiTargets = document.getElementById(
+          "corner-multi-targets",
+        );
+
+        if (
+          !spacingPropertySelect ||
+          !spacingMultiTargetsRow ||
+          !paddingMultiTargets ||
+          !cornerMultiTargets
+        ) {
+          return;
+        }
+
+        const mode = spacingPropertySelect.value;
+        const isSpacingCategory = currentTokenCategory === "spacing";
+        const showPadding = isSpacingCategory && mode === "paddingCustom";
+        const showCorners = isSpacingCategory && mode === "cornerRadiusCustom";
+
+        spacingMultiTargetsRow.style.display =
+          showPadding || showCorners ? "block" : "none";
+        paddingMultiTargets.style.display = showPadding ? "grid" : "none";
+        cornerMultiTargets.style.display = showCorners ? "grid" : "none";
+      }
+
+      function applySpacingTokenWithProperty(tokenName, property) {
+        if (!currentNodeId) {
+          console.log("No node selected");
+          return;
+        }
+
+        const targetProperties = resolveSpacingTargetProperties(property);
+        if (targetProperties.length === 0) {
+          if (property === "paddingCustom") {
+            console.log("Select at least one padding side");
+          } else if (property === "cornerRadiusCustom") {
+            console.log("Select at least one corner radius target");
+          }
+          return;
+        }
+
+        targetProperties.forEach((targetProperty) => {
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: "apply-spacing-token",
+                nodeId: currentNodeId,
+                tokenName,
+                property: targetProperty,
+              },
+            },
+            "*",
+          );
+        });
+      }
+
+      function applyManualSpacingUtility() {
+        const spacingUtilityInput = document.getElementById(
+          "spacing-utility-input",
+        );
+        if (!spacingUtilityInput) return;
+
+        if (!currentNodeId) {
+          console.log("No node selected");
+          return;
+        }
+
+        const parsed = parseSpacingUtilityInput(spacingUtilityInput.value);
+        if (!parsed) {
+          console.log(
+            "Unknown spacing utility. Try gap-2, p-4, pt-2, w-64, rounded-2",
+          );
+          return;
+        }
+
+        markPendingApplyFeedback();
+        applySpacingTokenWithProperty(parsed.tokenName, parsed.property);
+
+        spacingUtilityInput.value = "";
+      }
+
+      function resolveColorTokenByUtilityToken(tokenText) {
+        const normalizedToken = String(tokenText || "")
+          .trim()
+          .toLowerCase();
+        if (!normalizedToken) return null;
+
+        const colorTokens = TAILWIND_TOKENS.colors || {};
+        for (const [colorName, shadeMap] of Object.entries(colorTokens)) {
+          if (
+            shadeMap &&
+            typeof shadeMap === "object" &&
+            !isTokenLeaf(shadeMap)
+          ) {
+            for (const shade of Object.keys(shadeMap)) {
+              const combined = `${colorName}-${shade}`.toLowerCase();
+              if (combined === normalizedToken) {
+                return { colorName, shade };
+              }
+            }
+          } else if (String(colorName).toLowerCase() === normalizedToken) {
+            return { colorName, shade: "default" };
+          }
+        }
+
+        return null;
+      }
+
+      function parseColorUtilityInput(rawValue) {
+        const value = String(rawValue || "")
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "");
+        if (!value) return null;
+
+        const colorPropertySelect = document.getElementById(
+          "color-property-select",
+        );
+        let property =
+          colorPropertySelect && colorPropertySelect.value === "stroke"
+            ? "stroke"
+            : "fill";
+
+        let tokenText = value;
+        if (value.startsWith("bg-")) {
+          property = "fill";
+          tokenText = value.slice(3);
+        } else if (value.startsWith("text-")) {
+          property = "fill";
+          tokenText = value.slice(5);
+        } else if (value.startsWith("border-")) {
+          property = "stroke";
+          tokenText = value.slice(7);
+        }
+
+        const resolved = resolveColorTokenByUtilityToken(tokenText);
+        if (!resolved) return null;
+
+        return {
+          property,
+          colorName: resolved.colorName,
+          shade: resolved.shade,
+        };
+      }
+
+      function applyManualColorUtility() {
+        const colorUtilityInput = document.getElementById(
+          "color-utility-input",
+        );
+        if (!colorUtilityInput) return;
+
+        if (!currentNodeId) {
+          console.log("No node selected");
+          return;
+        }
+
+        const parsed = parseColorUtilityInput(colorUtilityInput.value);
+        if (!parsed) {
+          console.log(
+            "Unknown color utility. Try stone-800, bg-stone-800, border-stone-800",
+          );
+          return;
+        }
+
+        markPendingApplyFeedback();
+        parent.postMessage(
+          {
+            pluginMessage: {
+              type: "apply-token",
+              nodeId: currentNodeId,
+              colorName: parsed.colorName,
+              shade: parsed.shade,
+              property: parsed.property,
+            },
+          },
+          "*",
+        );
+
+        colorUtilityInput.value = "";
+      }
+
+      function parseTypographyUtilityInput(rawValue) {
+        const value = String(rawValue || "")
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "");
+        if (!value) return null;
+
+        const typography = TAILWIND_TOKENS.typography || {};
+        const hasTypographyToken = (category, tokenName) =>
+          Boolean(
+            typography[category] &&
+            Object.prototype.hasOwnProperty.call(
+              typography[category],
+              tokenName,
+            ),
+          );
+
+        const mapped = [
+          { prefix: "text-", category: "fontSize" },
+          { prefix: "leading-", category: "lineHeight" },
+          { prefix: "tracking-", category: "letterSpacing" },
+        ];
+
+        for (const item of mapped) {
+          if (value.startsWith(item.prefix)) {
+            const tokenName = value.slice(item.prefix.length);
+            if (hasTypographyToken(item.category, tokenName)) {
+              return { category: item.category, tokenName };
+            }
+          }
+        }
+
+        if (value.startsWith("font-")) {
+          const tokenName = value.slice(5);
+          if (hasTypographyToken("fontWeight", tokenName)) {
+            return { category: "fontWeight", tokenName };
+          }
+          if (hasTypographyToken("fontFamily", tokenName)) {
+            return { category: "fontFamily", tokenName };
+          }
+        }
+
+        if (hasTypographyToken("fontSize", value)) {
+          return { category: "fontSize", tokenName: value };
+        }
+
+        return null;
+      }
+
+      function applyManualTypographyUtility() {
+        const typographyUtilityInput = document.getElementById(
+          "typography-utility-input",
+        );
+        if (!typographyUtilityInput) return;
+
+        if (!currentNodeId) {
+          console.log("No node selected");
+          return;
+        }
+
+        const parsed = parseTypographyUtilityInput(
+          typographyUtilityInput.value,
+        );
+        if (!parsed) {
+          console.log(
+            "Unknown typography utility. Try text-xl, font-semibold, leading-tight, tracking-wide",
+          );
+          return;
+        }
+
+        markPendingApplyFeedback();
+        parent.postMessage(
+          {
+            pluginMessage: {
+              type: "apply-typography-token",
+              nodeId: currentNodeId,
+              category: parsed.category,
+              tokenName: parsed.tokenName,
+            },
+          },
+          "*",
+        );
+
+        typographyUtilityInput.value = "";
       }
 
       // Syncs search input to live token tree filtering
@@ -2957,9 +4043,100 @@
       if (tokenSearchInput) {
         tokenSearchInput.addEventListener("input", () => {
           tokenSearchQuery = tokenSearchInput.value || "";
+          if (tokenSearchClearBtn) {
+            tokenSearchClearBtn.disabled = tokenSearchQuery.trim().length === 0;
+          }
           renderTokenTree();
         });
       }
+
+      if (tokenSearchClearBtn) {
+        tokenSearchClearBtn.addEventListener("click", () => {
+          clearTokenSearch();
+          renderTokenTree();
+          tokenSearchInput?.focus();
+        });
+      }
+
+      const applySpacingUtilityBtn = document.getElementById(
+        "apply-spacing-utility-btn",
+      );
+      const spacingUtilityInputEl = document.getElementById(
+        "spacing-utility-input",
+      );
+      if (applySpacingUtilityBtn) {
+        applySpacingUtilityBtn.addEventListener("click", () => {
+          applyManualSpacingUtility();
+        });
+      }
+      if (spacingUtilityInputEl) {
+        spacingUtilityInputEl.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            applyManualSpacingUtility();
+          }
+        });
+      }
+
+      const spacingPropertySelect = document.getElementById(
+        "spacing-property-select",
+      );
+      if (spacingPropertySelect) {
+        spacingPropertySelect.addEventListener("change", () => {
+          updateSpacingMultiTargetUi();
+        });
+      }
+
+      const applyColorUtilityBtn = document.getElementById(
+        "apply-color-utility-btn",
+      );
+      const colorUtilityInputEl = document.getElementById(
+        "color-utility-input",
+      );
+      if (applyColorUtilityBtn) {
+        applyColorUtilityBtn.addEventListener("click", () => {
+          applyManualColorUtility();
+        });
+      }
+      if (colorUtilityInputEl) {
+        colorUtilityInputEl.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            applyManualColorUtility();
+          }
+        });
+      }
+
+      const applyTypographyUtilityBtn = document.getElementById(
+        "apply-typography-utility-btn",
+      );
+      const typographyUtilityInputEl = document.getElementById(
+        "typography-utility-input",
+      );
+      if (applyTypographyUtilityBtn) {
+        applyTypographyUtilityBtn.addEventListener("click", () => {
+          applyManualTypographyUtility();
+        });
+      }
+      if (typographyUtilityInputEl) {
+        typographyUtilityInputEl.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            applyManualTypographyUtility();
+          }
+        });
+      }
+
+      const typographyPropertySelect = document.getElementById(
+        "typography-property-select",
+      );
+      if (typographyPropertySelect) {
+        typographyPropertySelect.addEventListener("change", () => {
+          renderTokenTree();
+        });
+      }
+
+      updateTokenSearchUi();
 
       /* === Render Functions === */
       /* Display all node properties in the Editable Fields section */
@@ -3431,6 +4608,66 @@
         }
       }
 
+      function openCollapsibleSection(button) {
+        if (!button) return;
+        const content = button.nextElementSibling;
+        if (!content) return;
+        button.classList.add("active");
+        content.classList.add("open");
+        content.style.maxHeight = content.scrollHeight + "px";
+      }
+
+      function closeCollapsibleSection(button) {
+        if (!button) return;
+        const content = button.nextElementSibling;
+        if (!content) return;
+        button.classList.remove("active");
+        content.classList.remove("open");
+        content.style.maxHeight = null;
+      }
+
+      function setSidebarActiveSection(sectionKey) {
+        if (!mainSidebarNav) return;
+        mainSidebarNav
+          .querySelectorAll(".sidebar-nav-btn")
+          .forEach((button) => {
+            const buttonSection = button.getAttribute("data-section") || "";
+            button.classList.toggle("active", buttonSection === sectionKey);
+          });
+      }
+
+      function syncSidebarWithOpenSection() {
+        const firstOpenMainSection = document.querySelector(
+          ".collapsible[data-section].active",
+        );
+        const sectionKey = firstOpenMainSection
+          ? firstOpenMainSection.getAttribute("data-section") || ""
+          : "";
+        setSidebarActiveSection(sectionKey);
+      }
+
+      function jumpToMainSection(sectionKey) {
+        if (!sectionKey) return;
+        const targetButton = document.querySelector(
+          `.collapsible[data-section="${sectionKey}"]`,
+        );
+        if (!targetButton) return;
+
+        document
+          .querySelectorAll(".collapsible[data-section]")
+          .forEach((button) => {
+            if (button === targetButton) {
+              openCollapsibleSection(button);
+            } else {
+              closeCollapsibleSection(button);
+            }
+          });
+
+        targetButton.scrollIntoView({ behavior: "smooth", block: "start" });
+        setSidebarActiveSection(sectionKey);
+        requestAnimationFrame(refreshOpenCollapsibles);
+      }
+
       function updateSelection(message) {
         currentNodeId = message.data?.id || null;
         currentSelectionIds = Array.isArray(message.selectionIds)
@@ -3450,6 +4687,7 @@
         appState.tailwind = message.tailwind || "";
         appState.reactTailwind = message.reactTailwind || "";
         renderCode();
+        consumePendingApplyFeedback();
         requestAnimationFrame(refreshOpenCollapsibles);
       }
 
@@ -3484,23 +4722,52 @@
         );
       });
 
+      document.addEventListener("click", (event) => {
+        if (!(event.target instanceof Element)) return;
+        const applyTrigger = event.target.closest(
+          [
+            "#layout-apply-auto-btn",
+            "button[data-layout-action]",
+            "#gradient-apply-btn",
+            "#apply-saved-gradient-btn",
+            "#apply-spacing-utility-btn",
+            "#apply-color-utility-btn",
+            "#apply-typography-utility-btn",
+            ".token-shade",
+          ].join(","),
+        );
+        if (applyTrigger) {
+          markPendingApplyFeedback();
+        }
+      });
+
       /* === Collapsible Functionality (W3Schools pattern) === */
       var coll = document.getElementsByClassName("collapsible");
       var i;
 
       for (i = 0; i < coll.length; i++) {
         coll[i].addEventListener("click", function () {
-          this.classList.toggle("active");
-          var content = this.nextElementSibling;
-          if (content.style.maxHeight) {
-            content.classList.remove("open");
-            content.style.maxHeight = null;
+          if (this.classList.contains("active")) {
+            closeCollapsibleSection(this);
           } else {
-            content.classList.add("open");
-            content.style.maxHeight = content.scrollHeight + "px";
+            openCollapsibleSection(this);
           }
+          syncSidebarWithOpenSection();
         });
       }
+
+      if (mainSidebarNav) {
+        mainSidebarNav
+          .querySelectorAll(".sidebar-nav-btn")
+          .forEach((button) => {
+            button.addEventListener("click", () => {
+              const sectionKey = button.getAttribute("data-section") || "";
+              jumpToMainSection(sectionKey);
+            });
+          });
+      }
+
+      syncSidebarWithOpenSection();
 
       setupManualResize();
       applyUiScale();
@@ -3514,6 +4781,20 @@
 
         if (message.type === "selection-update") updateSelection(message);
         if (message.type === "no-selection") clearSelection();
+        if (message.type === "plugin-notification") {
+          pendingApplyFeedback = false;
+          if (pendingApplyFeedbackTimer) {
+            clearTimeout(pendingApplyFeedbackTimer);
+            pendingApplyFeedbackTimer = null;
+          }
+          const level =
+            message.level === "error"
+              ? "error"
+              : message.level === "info"
+                ? "info"
+                : "success";
+          showApplyToast(String(message.message || "Done"), level);
+        }
         if (message.type === "custom-tokens-update") {
           // This branch updates local custom token state from plugin storage data.
           customColors =
