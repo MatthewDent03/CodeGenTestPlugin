@@ -44,7 +44,9 @@ export function addNodePositionClasses(
     "layoutMode" in parent &&
     (parent as FrameNode).layoutMode !== "NONE";
 
-  if ("x" in node && "y" in node && !isParentFlex) {
+  const hasParent = Boolean(parent);
+
+  if (hasParent && "x" in node && "y" in node && !isParentFlex) {
     classList.push("absolute");
     classList.push(pxToPosition(node.x, "left"));
     classList.push(pxToPosition(node.y, "top"));
@@ -99,8 +101,5 @@ export function addNodeStrokeClasses(
   if (stroke.opacity < 1) {
     const opacityClass = opacityToTailwind(stroke.opacity);
     if (opacityClass) classList.push(`border-opacity-${opacityClass}`);
-  }
-  if (stroke.position === "INSIDE") {
-    classList.push("stroke-inside");
   }
 }

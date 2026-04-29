@@ -209,7 +209,26 @@ if (figma.editorType === "figma") {
     });
   };
 
-  let pendingUndoSelectionRestoreId: string | null = null;
+  const commitUndoStep = () => {
+    const figmaWithCommit = figma as PluginAPI & {
+      commitUndo?: () => void;
+    };
+    if (typeof figmaWithCommit.commitUndo === "function") {
+      figmaWithCommit.commitUndo();
+    }
+  };
+
+  type PluginNoticeLevel = "info" | "success" | "error";
+  const postPluginNotice = (
+    noticeMessage: string,
+    level: PluginNoticeLevel = "info",
+  ) => {
+    figma.ui.postMessage({
+      type: "plugin-notification",
+      level,
+      message: noticeMessage,
+    });
+  };
 
   figma.ui.onmessage = async (message) => {
     if (!message || !message.type) return;
@@ -246,14 +265,10 @@ if (figma.editorType === "figma") {
         triggerUndo?: () => void;
       };
 
-      const selectedBeforeUndo = figma.currentPage.selection[0];
-      pendingUndoSelectionRestoreId = selectedBeforeUndo?.id || null;
-
       if (typeof figmaWithUndo.triggerUndo === "function") {
         figmaWithUndo.triggerUndo();
       } else {
-        pendingUndoSelectionRestoreId = null;
-        figma.notify("Undo unavailable. Use Ctrl+Z");
+        postPluginNotice("Undo unavailable. Use Ctrl+Z", "error");
       }
       return;
     }
@@ -274,7 +289,7 @@ if (figma.editorType === "figma") {
         .trim()
         .toLowerCase();
       if (!tokenName || !hexPattern.test(hexValue)) {
-        figma.notify("Invalid custom color token");
+        postPluginNotice("Invalid custom color token", "error");
         return;
       }
 
@@ -284,7 +299,7 @@ if (figma.editorType === "figma") {
         customColorsStore,
       );
       await postCustomTokensToUI();
-      figma.notify(`Saved custom color: ${tokenName}`);
+      postPluginNotice(`Saved custom color: ${tokenName}`, "success");
       return;
     }
 
@@ -304,7 +319,7 @@ if (figma.editorType === "figma") {
         stops.length >= 2 ? stops : from && to ? [from, to] : [];
 
       if (!tokenName || normalizedStops.length < 2) {
-        figma.notify("Invalid custom gradient token");
+        postPluginNotice("Invalid custom gradient token", "error");
         return;
       }
 
@@ -318,7 +333,7 @@ if (figma.editorType === "figma") {
         customGradientsStore,
       );
       await postCustomTokensToUI();
-      figma.notify(`Saved custom gradient: ${tokenName}`);
+      postPluginNotice(`Saved custom gradient: ${tokenName}`, "success");
       return;
     }
 
@@ -359,6 +374,14 @@ if (figma.editorType === "figma") {
           return Number.isFinite(gap) && gap > 0 ? Math.round(gap) : 0;
         };
 
+        const normalizeAutoLayoutFrameName = (rawName: string): string => {
+          const trimmedName = String(rawName || "").trim();
+          const withoutAutoLayoutSuffix = trimmedName
+            .replace(/(?:\s+auto\s+layout)+$/i, "")
+            .trim();
+          return withoutAutoLayoutSuffix || "Frame";
+        };
+
         for (const nodeId of nodeIds) {
           const node = await figma.getNodeByIdAsync(nodeId);
           if (!node || node.type === "DOCUMENT" || node.type === "PAGE") {
@@ -371,7 +394,10 @@ if (figma.editorType === "figma") {
         }
 
         if (selectedNodes.length === 0) {
-          figma.notify("Selected node does not support auto layout");
+          postPluginNotice(
+            "Selected node does not support auto layout",
+            "error",
+          );
           return;
         }
 
@@ -413,7 +439,8 @@ if (figma.editorType === "figma") {
             setTextChildrenLeftAligned(child as SceneNode);
           }
 
-          figma.notify("Applied auto layout");
+          commitUndoStep();
+          postPluginNotice("Applied auto layout", "success");
           pushSelectionUpdate(frameNode);
           return;
         }
@@ -425,13 +452,17 @@ if (figma.editorType === "figma") {
           !("children" in parentNode) ||
           !("insertChild" in parentNode)
         ) {
-          figma.notify("Selected node does not support auto layout");
+          postPluginNotice(
+            "Selected node does not support auto layout",
+            "error",
+          );
           return;
         }
 
         if (!selectedNodes.every((node) => node.parent === parentNode)) {
-          figma.notify(
+          postPluginNotice(
             "Select nodes with the same parent to apply auto layout",
+            "error",
           );
           return;
         }
@@ -451,7 +482,7 @@ if (figma.editorType === "figma") {
 
         const insertIndex = originalOrder.get(firstNode.id) ?? 0;
         const autoLayoutFrame = figma.createFrame();
-        autoLayoutFrame.name = `${firstNode.name} Auto Layout`;
+        autoLayoutFrame.name = normalizeAutoLayoutFrameName(firstNode.name);
         parentNode.insertChild(insertIndex, autoLayoutFrame);
         autoLayoutFrame.x = firstNode.x;
         autoLayoutFrame.y = firstNode.y;
@@ -474,10 +505,12 @@ if (figma.editorType === "figma") {
         }
 
         figma.currentPage.selection = [autoLayoutFrame];
-        figma.notify(
+        commitUndoStep();
+        postPluginNotice(
           selectedNodes.length > 1
             ? `Applied auto layout to ${selectedNodes.length} nodes`
             : "Applied auto layout",
+          "success",
         );
         pushSelectionUpdate(autoLayoutFrame);
         return;
@@ -521,6 +554,8 @@ if (figma.editorType === "figma") {
           layoutWrap?: string;
           primaryAxisSizingMode?: string;
           counterAxisSizingMode?: string;
+          layoutSizingHorizontal?: string;
+          layoutSizingVertical?: string;
           layoutGrow?: number;
           layoutAlign?: string;
         };
@@ -529,6 +564,8 @@ if (figma.editorType === "figma") {
         const supportsAlignment =
           "primaryAxisAlignItems" in node || "counterAxisAlignItems" in node;
         const supportsSizing =
+          "layoutSizingHorizontal" in node ||
+          "layoutSizingVertical" in node ||
           "layoutGrow" in node ||
           "layoutAlign" in node ||
           "primaryAxisSizingMode" in node ||
@@ -600,6 +637,13 @@ if (figma.editorType === "figma") {
           const axis = String(message.axis || "WIDTH").toUpperCase();
           const sizing = String(message.sizing || "HUG").toUpperCase();
           const isFill = sizing === "FILL";
+
+          if (axis === "WIDTH" && "layoutSizingHorizontal" in node) {
+            mutableNode.layoutSizingHorizontal = isFill ? "FILL" : "HUG";
+          } else if (axis === "HEIGHT" && "layoutSizingVertical" in node) {
+            mutableNode.layoutSizingVertical = isFill ? "FILL" : "HUG";
+          }
+
           const parentLayoutMode =
             node.parent &&
             node.parent.type !== "DOCUMENT" &&
@@ -618,7 +662,18 @@ if (figma.editorType === "figma") {
             (layoutBasis === "HORIZONTAL" && axis === "WIDTH") ||
             (layoutBasis === "VERTICAL" && axis === "HEIGHT");
 
-          if ("layoutGrow" in node) {
+          const parentIsAutoLayout =
+            parentLayoutMode === "HORIZONTAL" ||
+            parentLayoutMode === "VERTICAL";
+          const parentAxisIsPrimary =
+            (parentLayoutMode === "HORIZONTAL" && axis === "WIDTH") ||
+            (parentLayoutMode === "VERTICAL" && axis === "HEIGHT");
+
+          if (
+            "layoutGrow" in node &&
+            parentIsAutoLayout &&
+            parentAxisIsPrimary
+          ) {
             mutableNode.layoutGrow = isFill ? 1 : 0;
           }
 
@@ -630,7 +685,11 @@ if (figma.editorType === "figma") {
             mutableNode.counterAxisSizingMode = isFill ? "FIXED" : "AUTO";
           }
 
-          if ("layoutAlign" in node) {
+          if (
+            "layoutAlign" in node &&
+            parentIsAutoLayout &&
+            !parentAxisIsPrimary
+          ) {
             mutableNode.layoutAlign = isFill ? "STRETCH" : "MIN";
           }
 
@@ -642,42 +701,58 @@ if (figma.editorType === "figma") {
       }
 
       if (updatedCount === 0) {
-        figma.notify("Selected node does not support auto layout");
+        if (action === "sizing") {
+          postPluginNotice(
+            "Selected node does not support width/height Hug/Fill",
+            "error",
+          );
+        } else {
+          postPluginNotice(
+            "Selected node does not support auto layout",
+            "error",
+          );
+        }
         return;
       }
 
       if (action === "auto-layout") {
-        figma.notify(
+        postPluginNotice(
           updatedCount > 1
             ? `Applied auto layout to ${updatedCount} nodes`
             : "Applied auto layout",
+          "success",
         );
       } else if (action === "flow-direction") {
-        figma.notify(
+        postPluginNotice(
           updatedCount > 1
             ? `Applied flow direction to ${updatedCount} nodes`
             : "Applied flow direction",
+          "success",
         );
       } else if (action === "alignment") {
-        figma.notify(
+        postPluginNotice(
           updatedCount > 1
             ? `Applied alignment to ${updatedCount} nodes`
             : "Applied alignment",
+          "success",
         );
       } else if (action === "sizing") {
-        figma.notify(
+        postPluginNotice(
           updatedCount > 1
             ? `Applied sizing to ${updatedCount} nodes`
             : "Applied sizing",
+          "success",
         );
       }
 
       if (skippedCount > 0 && updatedCount > 0) {
-        figma.notify(
+        postPluginNotice(
           `Skipped ${skippedCount} unsupported selection${skippedCount === 1 ? "" : "s"}`,
+          "info",
         );
       }
 
+      commitUndoStep();
       const selected = figma.currentPage.selection[0];
       if (selected) {
         pushSelectionUpdate(selected as SceneNode);
@@ -697,7 +772,7 @@ if (figma.editorType === "figma") {
       if (!node || node.type === "DOCUMENT" || node.type === "PAGE") return;
 
       if ("locked" in node && node.locked) {
-        figma.notify("Node is locked");
+        postPluginNotice("Node is locked", "error");
         return;
       }
 
@@ -903,14 +978,14 @@ if (figma.editorType === "figma") {
       // Get token hex value from registry
       const hexValue = tokenRegistry.getToken("colors", colorName, shade);
       if (!hexValue) {
-        figma.notify("Token not found");
+        postPluginNotice("Token not found", "error");
         return;
       }
 
       // Convert hex to Figma RGB format (0-1 range)
       const figmaColor = hexToFigmaColor(hexValue);
       if (!figmaColor) {
-        figma.notify("Invalid color");
+        postPluginNotice("Invalid color", "error");
         return;
       }
 
@@ -922,15 +997,20 @@ if (figma.editorType === "figma") {
       if (appliedProperty === "stroke") {
         node.setPluginData("applied-color-token", `${colorName}/${shade}`);
         node.setPluginData("tailwind-class", `border-${colorName}-${shade}`);
-        figma.notify(`Applied stroke color: ${colorName}-${shade}`);
+        postPluginNotice(
+          `Applied token: border-${colorName}-${shade}`,
+          "success",
+        );
       } else if (appliedProperty === "fill") {
         node.setPluginData("applied-color-token", `${colorName}/${shade}`);
         node.setPluginData("tailwind-class", `bg-${colorName}-${shade}`);
+        postPluginNotice(`Applied token: bg-${colorName}-${shade}`, "success");
       } else {
-        figma.notify("Cannot apply color to this node type");
+        postPluginNotice("Cannot apply color to this node type", "error");
         return;
       }
 
+      commitUndoStep();
       // Re-sync UI with fresh data
       pushSelectionUpdate(node as SceneNode);
       return;
@@ -949,7 +1029,7 @@ if (figma.editorType === "figma") {
 
       const figmaColor = hexToFigmaColor(colorHex);
       if (!figmaColor) {
-        figma.notify("Invalid custom color");
+        postPluginNotice("Invalid custom color", "error");
         return;
       }
 
@@ -961,16 +1041,23 @@ if (figma.editorType === "figma") {
       if (appliedProperty === "stroke") {
         node.setPluginData("applied-color-token", `custom/${colorName}`);
         node.setPluginData("tailwind-class", `border-[${colorHex}]`);
-        figma.notify(`Applied custom stroke: ${colorName}`);
+        postPluginNotice(
+          `Applied token: border-[${colorHex}] (${colorName})`,
+          "success",
+        );
       } else if (appliedProperty === "fill") {
         node.setPluginData("applied-color-token", `custom/${colorName}`);
         node.setPluginData("tailwind-class", `bg-[${colorHex}]`);
-        figma.notify(`Applied custom fill: ${colorName}`);
+        postPluginNotice(
+          `Applied token: bg-[${colorHex}] (${colorName})`,
+          "success",
+        );
       } else {
-        figma.notify("Cannot apply color to this node type");
+        postPluginNotice("Cannot apply color to this node type", "error");
         return;
       }
 
+      commitUndoStep();
       pushSelectionUpdate(node as SceneNode);
       return;
     }
@@ -981,7 +1068,7 @@ if (figma.editorType === "figma") {
       const colors = message.colors as string[] | undefined;
 
       if (!nodeId || !Array.isArray(colors) || colors.length < 2) {
-        figma.notify("Gradient requires at least two colors");
+        postPluginNotice("Gradient requires at least two colors", "error");
         return;
       }
 
@@ -1018,7 +1105,7 @@ if (figma.editorType === "figma") {
         .filter((stop) => stop !== null);
 
       if (gradientStops.length < 2) {
-        figma.notify("Invalid gradient colors");
+        postPluginNotice("Invalid gradient colors", "error");
         return;
       }
 
@@ -1033,7 +1120,8 @@ if (figma.editorType === "figma") {
 
       (node as any).fills = [gradientPaint];
       node.setPluginData("applied-gradient-token", "custom");
-      figma.notify("Applied gradient");
+      commitUndoStep();
+      postPluginNotice(`Applied gradient: ${colors.join(" → ")}`, "success");
 
       pushSelectionUpdate(node as SceneNode);
       return;
@@ -1053,14 +1141,14 @@ if (figma.editorType === "figma") {
       // Get spacing value from registry using the dedicated spacing method
       const spacingValue = tokenRegistry.getSpacingToken(tokenName);
       if (!spacingValue) {
-        figma.notify("Spacing token not found");
+        postPluginNotice("Spacing token not found", "error");
         return;
       }
 
       // Convert "16px" to 16
       const numericValue = parseFloat(spacingValue);
       if (!Number.isFinite(numericValue)) {
-        figma.notify("Invalid spacing value");
+        postPluginNotice("Invalid spacing value", "error");
         return;
       }
 
@@ -1145,11 +1233,11 @@ if (figma.editorType === "figma") {
           `bottomLeftRadius:${tokenName}`,
         );
       } else {
-        figma.notify(`Cannot apply spacing to ${property}`);
+        postPluginNotice(`Cannot apply spacing to ${property}`, "error");
         return;
       }
 
-      figma.notify(`Applied spacing-${tokenName} to ${property}`);
+      postPluginNotice(`Applied ${property}: spacing-${tokenName}`, "success");
 
       // Re-sync UI with fresh data
       pushSelectionUpdate(node as SceneNode);
@@ -1167,7 +1255,7 @@ if (figma.editorType === "figma") {
 
       const node = await figma.getNodeByIdAsync(nodeId);
       if (!node || node.type !== "TEXT") {
-        figma.notify("Please select a text node");
+        postPluginNotice("Please select a text node", "error");
         return;
       }
 
@@ -1180,7 +1268,7 @@ if (figma.editorType === "figma") {
         // Get typography value from registry
         typographyValue = tokenRegistry.getTypographyToken(category, tokenName);
         if (!typographyValue) {
-          figma.notify("Typography token not found");
+          postPluginNotice("Typography token not found", "error");
           return;
         }
       }
@@ -1199,7 +1287,7 @@ if (figma.editorType === "figma") {
             "applied-typography-token",
             `fontSize:${tokenName}`,
           );
-          figma.notify(`Applied font size: ${tokenName}`);
+          postPluginNotice(`Applied font size: ${tokenName}`, "success");
         }
       } else if (category === "letterSpacing") {
         // Convert em to px based on current font size
@@ -1215,7 +1303,7 @@ if (figma.editorType === "figma") {
             "applied-typography-token",
             `letterSpacing:${tokenName}`,
           );
-          figma.notify(`Applied letter spacing: ${tokenName}`);
+          postPluginNotice(`Applied letter spacing: ${tokenName}`, "success");
         }
       } else if (category === "lineHeight") {
         const ratio = parseFloat(typographyValue);
@@ -1227,7 +1315,7 @@ if (figma.editorType === "figma") {
             "applied-typography-token",
             `lineHeight:${tokenName}`,
           );
-          figma.notify(`Applied line height: ${tokenName}`);
+          postPluginNotice(`Applied line height: ${tokenName}`, "success");
         }
       } else if (category === "fontWeight") {
         // Map weight values to common font style names
@@ -1260,7 +1348,10 @@ if (figma.editorType === "figma") {
                 "applied-typography-token",
                 `fontWeight:${tokenName}`,
               );
-              figma.notify(`Applied font weight: ${tokenName} (${style})`);
+              postPluginNotice(
+                `Applied font weight: ${tokenName} (${style})`,
+                "success",
+              );
               fontApplied = true;
               break;
             } catch (error) {
@@ -1270,12 +1361,16 @@ if (figma.editorType === "figma") {
           }
 
           if (!fontApplied) {
-            figma.notify(
+            postPluginNotice(
               `Font weight "${tokenName}" (${weightValue}) not available for ${currentFont.family}`,
+              "error",
             );
           }
         } else {
-          figma.notify("Cannot apply font weight to mixed font selection");
+          postPluginNotice(
+            "Cannot apply font weight to mixed font selection",
+            "error",
+          );
         }
       } else if (category === "fontFamily") {
         const availableFonts = await getAvailableFontsCached();
@@ -1304,10 +1399,11 @@ if (figma.editorType === "figma") {
             "applied-typography-token",
             `fontFamily:${tokenName}`,
           );
-          figma.notify(`Applied font: ${resolvedFont.family}`);
+          postPluginNotice(`Applied font: ${resolvedFont.family}`, "success");
         } else {
-          figma.notify(
+          postPluginNotice(
             `No Tailwind-compatible ${tokenName} font is available in Figma on this machine.`,
+            "error",
           );
         }
       }
@@ -1333,7 +1429,7 @@ if (figma.editorType === "figma") {
       // Get effects value from registry
       const effectsValue = tokenRegistry.getEffectsToken(category, tokenName);
       if (!effectsValue) {
-        figma.notify("Effects token not found");
+        postPluginNotice("Effects token not found", "error");
         return;
       }
 
@@ -1356,14 +1452,17 @@ if (figma.editorType === "figma") {
             `borderWidth:${tokenName}`,
           );
           const posInfo = strokePosition ? ` (${strokePosition})` : "";
-          figma.notify(`Applied border width: ${tokenName}${posInfo}`);
+          postPluginNotice(
+            `Applied border width: ${tokenName}${posInfo}`,
+            "success",
+          );
         }
       } else if (category === "opacity") {
         const numericValue = parseFloat(effectsValue);
         if (Number.isFinite(numericValue)) {
           (node as any).opacity = numericValue;
           node.setPluginData("applied-effects-token", `opacity:${tokenName}`);
-          figma.notify(`Applied opacity: ${tokenName}`);
+          postPluginNotice(`Applied opacity: ${tokenName}`, "success");
         }
       } else if (category === "blur" && "effects" in node) {
         const numericValue = parseFloat(effectsValue);
@@ -1400,8 +1499,9 @@ if (figma.editorType === "figma") {
             "applied-effects-token",
             `blur:${tokenName}:${blurEffectType}`,
           );
-          figma.notify(
+          postPluginNotice(
             `Applied ${blurEffectType === "BACKGROUND_BLUR" ? "background" : "layer"} blur: ${tokenName}`,
+            "success",
           );
         }
       } else if (category === "shadow" && "effects" in node) {
@@ -1417,15 +1517,15 @@ if (figma.editorType === "figma") {
 
         const shadowEffects = shadowEffectsFromToken(tokenName);
         if (!shadowEffects) {
-          figma.notify(`Unknown shadow token: ${tokenName}`);
+          postPluginNotice(`Unknown shadow token: ${tokenName}`, "error");
           return;
         }
 
         (node as any).effects = [...nonShadowEffects, ...shadowEffects];
         node.setPluginData("applied-effects-token", `shadow:${tokenName}`);
-        figma.notify(`Applied shadow: ${tokenName}`);
+        postPluginNotice(`Applied shadow: ${tokenName}`, "success");
       } else {
-        figma.notify(`Cannot apply ${category} to this node type`);
+        postPluginNotice(`Cannot apply ${category} to this node type`, "error");
         return;
       }
 
@@ -1439,25 +1539,9 @@ if (figma.editorType === "figma") {
     const node = figma.currentPage.selection[0];
 
     if (!node) {
-      if (pendingUndoSelectionRestoreId) {
-        const restoreCandidate = figma.getNodeById(
-          pendingUndoSelectionRestoreId,
-        );
-        pendingUndoSelectionRestoreId = null;
-
-        if (restoreCandidate && restoreCandidate.type !== "PAGE") {
-          const restorableNode = restoreCandidate as SceneNode;
-          figma.currentPage.selection = [restorableNode];
-          pushSelectionUpdate(restorableNode);
-          return;
-        }
-      }
-
       figma.ui.postMessage({ type: "no-selection" });
       return;
     }
-
-    pendingUndoSelectionRestoreId = null;
 
     pushSelectionUpdate(node);
   });
@@ -1589,7 +1673,10 @@ function convertFrameHTML(
   level: number,
   parent?: SceneNode,
 ): string {
-  let cssText = `position:absolute; width:${node.width}px; height:${node.height}px; left:${node.x}px; top:${node.y}px;`;
+  const isRootFrame = !parent;
+  let cssText = isRootFrame
+    ? `position:relative; width:${node.width}px; height:${node.height}px;`
+    : `position:absolute; width:${node.width}px; height:${node.height}px; left:${node.x}px; top:${node.y}px;`;
 
   const fill = getFillColor(node);
   if (fill) cssText += ` background:${fill};`;
@@ -1675,6 +1762,43 @@ function convertTextNodeTailwind(
   level: number,
   parent?: SceneNode,
 ) {
+  const toCoreTailwindFontClass = (family: string): string => {
+    const normalizedFamily = String(family || "").toLowerCase();
+    if (
+      /(mono|consolas|menlo|monaco|courier|fira\s*code|source\s*code|jetbrains\s*mono)/.test(
+        normalizedFamily,
+      )
+    ) {
+      return "font-mono";
+    }
+    if (
+      /(serif|times|georgia|garamond|cambria|palatino|baskerville)/.test(
+        normalizedFamily,
+      )
+    ) {
+      return "font-serif";
+    }
+    return "font-sans";
+  };
+
+  const toArbitraryTailwindFontFamilyClass = (family: string): string => {
+    const trimmedFamily = String(family || "").trim();
+    if (!trimmedFamily) return "";
+
+    const genericFallback =
+      toCoreTailwindFontClass(trimmedFamily) === "font-mono"
+        ? "monospace"
+        : toCoreTailwindFontClass(trimmedFamily) === "font-serif"
+          ? "serif"
+          : "sans-serif";
+
+    const escapedFamily = trimmedFamily
+      .replace(/\\/g, "\\\\")
+      .replace(/'/g, "\\'");
+
+    return `font-['${escapedFamily}',${genericFallback}]`;
+  };
+
   const textClasses: string[] = [];
 
   if (node.name) {
@@ -1695,7 +1819,12 @@ function convertTextNodeTailwind(
   // Font family and weight/style
   if (node.fontName !== figma.mixed) {
     const font = node.fontName as FontName;
-    textClasses.push(`font-['${font.family}']`);
+    const fontFamilyClass = toArbitraryTailwindFontFamilyClass(font.family);
+    if (fontFamilyClass) {
+      textClasses.push(fontFamilyClass);
+    } else {
+      textClasses.push(toCoreTailwindFontClass(font.family));
+    }
     const fontProps = getFontWeightAndStyle(node);
     if (fontProps.weight === "bold") textClasses.push("font-bold");
     else if (fontProps.weight === "600") textClasses.push("font-semibold");
