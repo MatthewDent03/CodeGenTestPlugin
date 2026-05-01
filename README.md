@@ -49,7 +49,7 @@ If both commands return versions, continue with `npm install`.
 
 ## Installation
 
-### Option 1 (Recommended): Clone via SSH
+### Option 1: Clone via Personal SSH
 
 ```powershell
 git clone git@github.com:MatthewDent03/CodeGenTestPlugin.git
@@ -58,7 +58,7 @@ git checkout my-code
 git pull origin my-code
 ```
 
-### Option 2: Clone via HTTPS (fallback)
+### Option 2: Clone via Personal HTTPS (fallback)
 
 ```powershell
 git clone https://github.com/MatthewDent03/CodeGenTestPlugin.git
@@ -69,12 +69,16 @@ git pull origin my-code
 
 This project is tested from the `my-code` branch. Make sure you're on that branch before installing dependencies and building.
 
-### Option 3: Extract from Local Directory
+### Option 3 (Recommended): Clone via Git Classroom HTTPS (fallback)
 
 ```powershell
-# Navigate to the plugin directory
-cd "c:\Users\Mattd\OneDrive - Dun Laoghaire Institute of Art, Design and Technology\MajorProject\InitialResearch\CodeGenTestPlugin"
+git clone https://github.com/IADT-CC-Y4-MP/final-code-for-major-project-MatthewDent03.git
+cd final-code-for-major-project-MatthewDent03
+git checkout my-code
+git pull origin my-code
 ```
+
+This project is tested from the `my-code` branch. Make sure you're on that branch before installing dependencies and building.
 
 ### Install Dependencies
 
@@ -128,7 +132,7 @@ npm run watch
 
 4. **Run the Plugin**
    Open any Figma design file
-   Go to **Plugins** → **Development** → **Simple HTML Codegen**
+   Go to **Plugins** → **Development** → **FigFlow TW**
    The plugin panel will appear on the right side
    Select any layer or frame to inspect its properties
 
@@ -187,7 +191,7 @@ The `Source/manifest.json` file defines the plugin's behavior:
 
 ```json
 {
-  "name": "Simple HTML Codegen",
+  "name": "FigFlow TW",
   "id": "1573026597684374431",
   "api": "1.0.0",
   "main": "code.js",
